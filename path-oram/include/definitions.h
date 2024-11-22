@@ -13,9 +13,9 @@
 #define USE_REDIS true
 #endif
 
-#ifndef USE_AEROSPIKE
-#define USE_AEROSPIKE true
-#endif
+// #ifndef USE_AEROSPIKE
+// #define USE_AEROSPIKE true
+// #endif
 
 // use 256-bit security
 #define KEYSIZE 32

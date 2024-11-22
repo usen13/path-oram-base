@@ -1,12 +1,12 @@
 #include "storage-adapter.hpp"
 
-#if USE_AEROSPIKE
-#include <aerospike/aerospike_batch.h>
-#include <aerospike/aerospike_key.h>
-#include <aerospike/as_batch.h>
-#include <aerospike/as_key.h>
-#include <aerospike/as_record.h>
-#endif
+// #if USE_AEROSPIKE
+// #include <aerospike/aerospike_batch.h>
+// #include <aerospike/aerospike_key.h>
+// #include <aerospike/as_batch.h>
+// #include <aerospike/as_key.h>
+// #include <aerospike/as_record.h>
+// #endif
 
 #include <algorithm>
 #include <chrono>
@@ -492,142 +492,142 @@ namespace PathORAM
 #pragma endregion RedisStorageAdapter
 #endif
 
-#if USE_AEROSPIKE
-#pragma region AerospikeStorageAdapter
+// #if USE_AEROSPIKE
+// #pragma region AerospikeStorageAdapter
 
-	AerospikeStorageAdapter::~AerospikeStorageAdapter()
-	{
-		as_error err;
+// 	AerospikeStorageAdapter::~AerospikeStorageAdapter()
+// 	{
+// 		as_error err;
 
-		aerospike_close(as.get(), &err);
-		aerospike_destroy(as.get());
-	}
+// 		aerospike_close(as.get(), &err);
+// 		aerospike_destroy(as.get());
+// 	}
 
-	AerospikeStorageAdapter::AerospikeStorageAdapter(const number capacity, const number userBlockSize, const bytes key, const string host, const bool override, const number Z, const string asset, const number batchLimit) :
-		AbsStorageAdapter(capacity, userBlockSize, key, Z, batchLimit),
-		as(make_unique<aerospike>()),
-		asset(asset)
-	{
-		as_config config;
-		as_config_init(&config);
-		as_config_add_host(&config, host.c_str(), 3000);
+// 	AerospikeStorageAdapter::AerospikeStorageAdapter(const number capacity, const number userBlockSize, const bytes key, const string host, const bool override, const number Z, const string asset, const number batchLimit) :
+// 		AbsStorageAdapter(capacity, userBlockSize, key, Z, batchLimit),
+// 		as(make_unique<aerospike>()),
+// 		asset(asset)
+// 	{
+// 		as_config config;
+// 		as_config_init(&config);
+// 		as_config_add_host(&config, host.c_str(), 3000);
 
-		aerospike_init(as.get(), &config);
+// 		aerospike_init(as.get(), &config);
 
-		as_error err;
+// 		as_error err;
 
-		aerospike_connect(as.get(), &err);
+// 		aerospike_connect(as.get(), &err);
 
-		if (err.code != AEROSPIKE_OK)
-		{
-			throw Exception(boost::format("connection to Aerospike failed with host: %1% (message: %2%") % host % err.message);
-		}
+// 		if (err.code != AEROSPIKE_OK)
+// 		{
+// 			throw Exception(boost::format("connection to Aerospike failed with host: %1% (message: %2%") % host % err.message);
+// 		}
 
-		if (override)
-		{
-			deleteAll();
+// 		if (override)
+// 		{
+// 			deleteAll();
 
-			fillWithZeroes();
-		}
-	}
+// 			fillWithZeroes();
+// 		}
+// 	}
 
-	void AerospikeStorageAdapter::getInternal(const number location, bytes &response) const
-	{
-		as_key asKey;
-		as_key_init(&asKey, "test", asset.c_str(), to_string(location).c_str());
+// 	void AerospikeStorageAdapter::getInternal(const number location, bytes &response) const
+// 	{
+// 		as_key asKey;
+// 		as_key_init(&asKey, "test", asset.c_str(), to_string(location).c_str());
 
-		as_error err;
-		as_record *p_rec = NULL;
+// 		as_error err;
+// 		as_record *p_rec = NULL;
 
-		aerospike_key_get(as.get(), &err, NULL, &asKey, &p_rec);
+// 		aerospike_key_get(as.get(), &err, NULL, &asKey, &p_rec);
 
-		as_bytes *rawBytes = as_record_get_bytes(p_rec, "value");
+// 		as_bytes *rawBytes = as_record_get_bytes(p_rec, "value");
 
-		uint8_t *rawChars = as_bytes_get(rawBytes);
+// 		uint8_t *rawChars = as_bytes_get(rawBytes);
 
-		response.insert(response.begin(), rawChars, rawChars + blockSize);
+// 		response.insert(response.begin(), rawChars, rawChars + blockSize);
 
-		as_record_destroy(p_rec);
-		p_rec = NULL;
-	}
+// 		as_record_destroy(p_rec);
+// 		p_rec = NULL;
+// 	}
 
-	void AerospikeStorageAdapter::setInternal(const number location, const bytes &raw)
-	{
-		as_key asKey;
-		as_key_init(&asKey, "test", asset.c_str(), to_string(location).c_str());
+// 	void AerospikeStorageAdapter::setInternal(const number location, const bytes &raw)
+// 	{
+// 		as_key asKey;
+// 		as_key_init(&asKey, "test", asset.c_str(), to_string(location).c_str());
 
-		uint8_t rawChars[raw.size()];
-		copy(raw.begin(), raw.end(), rawChars);
-		as_bytes rawBytes;
-		as_bytes_init_wrap(&rawBytes, rawChars, raw.size(), false);
+// 		uint8_t rawChars[raw.size()];
+// 		copy(raw.begin(), raw.end(), rawChars);
+// 		as_bytes rawBytes;
+// 		as_bytes_init_wrap(&rawBytes, rawChars, raw.size(), false);
 
-		as_record rec;
-		as_record_inita(&rec, 1);
-		as_record_set_bytes(&rec, "value", &rawBytes);
+// 		as_record rec;
+// 		as_record_inita(&rec, 1);
+// 		as_record_set_bytes(&rec, "value", &rawBytes);
 
-		as_error err;
+// 		as_error err;
 
-		aerospike_key_put(as.get(), &err, NULL, &asKey, &rec);
-	}
+// 		aerospike_key_put(as.get(), &err, NULL, &asKey, &rec);
+// 	}
 
-	void AerospikeStorageAdapter::getInternal(const vector<number> &locations, vector<bytes> &response) const
-	{
-		as_batch batch;
-		as_batch_inita(&batch, locations.size());
+// 	void AerospikeStorageAdapter::getInternal(const vector<number> &locations, vector<bytes> &response) const
+// 	{
+// 		as_batch batch;
+// 		as_batch_inita(&batch, locations.size());
 
-		char *strs[locations.size()];
+// 		char *strs[locations.size()];
 
-		for (uint i = 0; i < locations.size(); i++)
-		{
-			strs[i] = new char[to_string(locations[i]).length() + 1];
-			strcpy(strs[i], to_string(locations[i]).c_str());
-			as_key_init(as_batch_keyat(&batch, i), "test", asset.c_str(), strs[i]);
-		}
+// 		for (uint i = 0; i < locations.size(); i++)
+// 		{
+// 			strs[i] = new char[to_string(locations[i]).length() + 1];
+// 			strcpy(strs[i], to_string(locations[i]).c_str());
+// 			as_key_init(as_batch_keyat(&batch, i), "test", asset.c_str(), strs[i]);
+// 		}
 
-		struct UData
-		{
-			vector<bytes> result;
-			number blockSize;
-		};
+// 		struct UData
+// 		{
+// 			vector<bytes> result;
+// 			number blockSize;
+// 		};
 
-		auto callback = [](const as_batch_read *results, uint32_t n, void *udata) -> bool {
-			for (uint i = 0; i < n; i++)
-			{
-				as_bytes *rawBytes = as_record_get_bytes(&results[i].record, "value");
+// 		auto callback = [](const as_batch_read *results, uint32_t n, void *udata) -> bool {
+// 			for (uint i = 0; i < n; i++)
+// 			{
+// 				as_bytes *rawBytes = as_record_get_bytes(&results[i].record, "value");
 
-				uint8_t *rawChars = as_bytes_get(rawBytes);
+// 				uint8_t *rawChars = as_bytes_get(rawBytes);
 
-				auto t						= bytes(rawChars, rawChars + ((UData *)udata)->blockSize);
-				((UData *)udata)->result[i] = t;
-			}
+// 				auto t						= bytes(rawChars, rawChars + ((UData *)udata)->blockSize);
+// 				((UData *)udata)->result[i] = t;
+// 			}
 
-			return true;
-		};
+// 			return true;
+// 		};
 
-		UData udata{
-			.result	   = vector<bytes>(),
-			.blockSize = blockSize};
-		udata.result.resize(locations.size());
+// 		UData udata{
+// 			.result	   = vector<bytes>(),
+// 			.blockSize = blockSize};
+// 		udata.result.resize(locations.size());
 
-		as_error err;
-		aerospike_batch_get(as.get(), &err, NULL, &batch, callback, &udata);
+// 		as_error err;
+// 		aerospike_batch_get(as.get(), &err, NULL, &batch, callback, &udata);
 
-		as_batch_destroy(&batch);
+// 		as_batch_destroy(&batch);
 
-		for (uint i = 0; i < locations.size(); i++)
-		{
-			delete[] strs[i];
-		}
+// 		for (uint i = 0; i < locations.size(); i++)
+// 		{
+// 			delete[] strs[i];
+// 		}
 
-		copy(udata.result.begin(), udata.result.end(), back_inserter(response));
-	}
+// 		copy(udata.result.begin(), udata.result.end(), back_inserter(response));
+// 	}
 
-	void AerospikeStorageAdapter::deleteAll()
-	{
-		as_error err;
-		aerospike_truncate(as.get(), &err, NULL, "test", asset.c_str(), 0);
-	}
+// 	void AerospikeStorageAdapter::deleteAll()
+// 	{
+// 		as_error err;
+// 		aerospike_truncate(as.get(), &err, NULL, "test", asset.c_str(), 0);
+// 	}
 
-#pragma endregion AerospikeStorageAdapter
-#endif
+// #pragma endregion AerospikeStorageAdapter
+// #endif
 }

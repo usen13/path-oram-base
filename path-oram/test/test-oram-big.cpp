@@ -16,9 +16,9 @@ namespace PathORAM
 #if USE_REDIS
 		StorageAdapterTypeRedis,
 #endif
-#if USE_AEROSPIKE
-		StorageAdapterTypeAerospike,
-#endif
+// #if USE_AEROSPIKE
+// 		StorageAdapterTypeAerospike,
+// #endif
 		StorageAdapterTypeInMemory,
 		StorageAdapterTypeFileSystem
 	};
@@ -30,9 +30,9 @@ namespace PathORAM
 		inline static string REDIS_HOST = "tcp://127.0.0.1:6379";
 #endif
 
-#if USE_AEROSPIKE
-		inline static string AEROSPIKE_HOST = "127.0.0.1";
-#endif
+// #if USE_AEROSPIKE
+		// inline static string AEROSPIKE_HOST = "127.0.0.1";
+// #endif
 
 		protected:
 		unique_ptr<ORAM> oram;
@@ -76,11 +76,11 @@ namespace PathORAM
 					this->storage = shared_ptr<AbsStorageAdapter>(new RedisStorageAdapter(CAPACITY + Z, BLOCK_SIZE, KEY, REDIS_HOST, true, Z));
 					break;
 #endif
-#if USE_AEROSPIKE
-				case StorageAdapterTypeAerospike:
-					this->storage = shared_ptr<AbsStorageAdapter>(new AerospikeStorageAdapter(CAPACITY + Z, BLOCK_SIZE, KEY, AEROSPIKE_HOST, true, Z));
-					break;
-#endif
+// #if USE_AEROSPIKE
+// 				case StorageAdapterTypeAerospike:
+// 					this->storage = shared_ptr<AbsStorageAdapter>(new AerospikeStorageAdapter(CAPACITY + Z, BLOCK_SIZE, KEY, AEROSPIKE_HOST, true, Z));
+// 					break;
+// #endif
 				default:
 					throw Exception(boost::format("TestingStorageAdapterType %1% is not implemented") % storageType);
 			}
@@ -107,12 +107,12 @@ namespace PathORAM
 		~ORAMBigTest()
 		{
 			remove(FILENAME.c_str());
-#if USE_AEROSPIKE
-			if (get<3>(GetParam()) == StorageAdapterTypeAerospike)
-			{
-				static_pointer_cast<AerospikeStorageAdapter>(storage)->deleteAll();
-			}
-#endif
+// #if USE_AEROSPIKE
+// 			if (get<3>(GetParam()) == StorageAdapterTypeAerospike)
+// 			{
+// 				static_pointer_cast<AerospikeStorageAdapter>(storage)->deleteAll();
+// 			}
+// #endif
 			storage.reset();
 #if USE_REDIS
 			if (get<3>(GetParam()) == StorageAdapterTypeRedis)

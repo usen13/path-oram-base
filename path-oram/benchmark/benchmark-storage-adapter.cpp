@@ -14,9 +14,9 @@ namespace PathORAM
 #if USE_REDIS
 		StorageAdapterTypeRedis,
 #endif
-#if USE_AEROSPIKE
-		StorageAdapterTypeAerospike,
-#endif
+// #if USE_AEROSPIKE
+// 		StorageAdapterTypeAerospike,
+// #endif
 		StorageAdapterTypeInMemory,
 		StorageAdapterTypeFileSystem
 	};
@@ -53,11 +53,11 @@ namespace PathORAM
 					adapter = make_unique<RedisStorageAdapter>(CAPACITY, BLOCK_SIZE, bytes(), REDIS_HOST, false, 1);
 					break;
 #endif
-#if USE_AEROSPIKE
-				case StorageAdapterTypeAerospike:
-					adapter = make_unique<AerospikeStorageAdapter>(CAPACITY, BLOCK_SIZE, bytes(), AEROSPIKE_HOST, false, 1);
-					break;
-#endif
+// #if USE_AEROSPIKE
+// 				case StorageAdapterTypeAerospike:
+// 					adapter = make_unique<AerospikeStorageAdapter>(CAPACITY, BLOCK_SIZE, bytes(), AEROSPIKE_HOST, false, 1);
+// 					break;
+// #endif
 				default:
 					throw Exception(boost::format("TestingStorageAdapterType %1% is not implemented") % type);
 			}
@@ -163,39 +163,39 @@ namespace PathORAM
 		}
 #endif
 
-#if USE_AEROSPIKE
-		for (auto host : vector<string>{"127.0.0.1", "aerospike"})
-		{
-			try
-			{
-				// test if Aerospike is availbale
-				as_config config;
-				as_config_init(&config);
-				as_config_add_host(&config, host.c_str(), 3000);
+// #if USE_AEROSPIKE
+// 		for (auto host : vector<string>{"127.0.0.1", "aerospike"})
+// 		{
+// 			try
+// 			{
+// 				// test if Aerospike is availbale
+// 				as_config config;
+// 				as_config_init(&config);
+// 				as_config_add_host(&config, host.c_str(), 3000);
 
-				aerospike aerospike;
-				aerospike_init(&aerospike, &config);
+// 				aerospike aerospike;
+// 				aerospike_init(&aerospike, &config);
 
-				as_error err;
-				aerospike_connect(&aerospike, &err);
+// 				as_error err;
+// 				aerospike_connect(&aerospike, &err);
 
-				if (err.code == AEROSPIKE_OK)
-				{
-					PathORAM::StorageAdapterBenchmark::AEROSPIKE_HOST = host;
-					b
-						->Args({StorageAdapterTypeAerospike, 1})
-						->Args({StorageAdapterTypeAerospike, 16});
-					iterations									= 1 << 10;
-					PathORAM::StorageAdapterBenchmark::CAPACITY = 1 << 12;
+// 				if (err.code == AEROSPIKE_OK)
+// 				{
+// 					PathORAM::StorageAdapterBenchmark::AEROSPIKE_HOST = host;
+// 					b
+// 						->Args({StorageAdapterTypeAerospike, 1})
+// 						->Args({StorageAdapterTypeAerospike, 16});
+// 					iterations									= 1 << 10;
+// 					PathORAM::StorageAdapterBenchmark::CAPACITY = 1 << 12;
 
-					break;
-				}
-			}
-			catch (...)
-			{
-			}
-		}
-#endif
+// 					break;
+// 				}
+// 			}
+// 			catch (...)
+// 			{
+// 			}
+// 		}
+// #endif
 
 		b->Iterations(iterations);
 	}

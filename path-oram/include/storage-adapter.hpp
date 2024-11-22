@@ -10,9 +10,9 @@
 #include <sw/redis++/redis++.h>
 #endif
 
-#if USE_AEROSPIKE
-#include <aerospike/aerospike.h>
-#endif
+// #if USE_AEROSPIKE
+// #include <aerospike/aerospike.h>
+// #endif
 
 namespace PathORAM
 {
@@ -308,54 +308,54 @@ namespace PathORAM
 	};
 #endif
 
-#if USE_AEROSPIKE
-	/**
-	 * @brief Aerospike implementation of the storage adapter.
-	 *
-	 * Uses an Aerospike cluster as the underlying storage.
-	 */
-	class AerospikeStorageAdapter : public AbsStorageAdapter
-	{
-		private:
-		unique_ptr<aerospike> as;
-		const string asset;
+// #if USE_AEROSPIKE
+// 	/**
+// 	 * @brief Aerospike implementation of the storage adapter.
+// 	 *
+// 	 * Uses an Aerospike cluster as the underlying storage.
+// 	 */
+// 	class AerospikeStorageAdapter : public AbsStorageAdapter
+// 	{
+// 		private:
+// 		unique_ptr<aerospike> as;
+// 		const string asset;
 
-		/**
-		 * @brief remove all records from the own set
-		 *
-		 */
-		void deleteAll();
+// 		/**
+// 		 * @brief remove all records from the own set
+// 		 *
+// 		 */
+// 		void deleteAll();
 
-		friend class ORAMBigTest;
+// 		friend class ORAMBigTest;
 
-		public:
-		/**
-		 * @brief Construct a new Aerospike Storage Adapter object
-		 *
-		 * It is possible to persist the data.
-		 * If the file exists, instantiate with override = false, and the key equal to the one used before.
-		 *
-		 * @param capacity the max number of blocks
-		 * @param userBlockSize the size of the user's portion of the block in bytes
-		 * @param key the AES key to use (may be empty to generate new random one)
-		 * @param host the URL to the Aerospike cluster (will throw exception if ping on the URL fails)
-		 * @param override if true, the cluster will be flushed and filled with random blocks first
-		 * @param Z the number of blocks in a bucket.
-		 * GET and SET will operate using Z.
-		 * @param set specifies the set to use for all operations
-		 * @param batchLimit the maximum number of requests in a batch.
-		 */
-		AerospikeStorageAdapter(const number capacity, const number userBlockSize, const bytes key, const string host, const bool override, const number Z, const string set = "default", const number batchLimit = 0);
-		~AerospikeStorageAdapter() final;
+// 		public:
+// 		/**
+// 		 * @brief Construct a new Aerospike Storage Adapter object
+// 		 *
+// 		 * It is possible to persist the data.
+// 		 * If the file exists, instantiate with override = false, and the key equal to the one used before.
+// 		 *
+// 		 * @param capacity the max number of blocks
+// 		 * @param userBlockSize the size of the user's portion of the block in bytes
+// 		 * @param key the AES key to use (may be empty to generate new random one)
+// 		 * @param host the URL to the Aerospike cluster (will throw exception if ping on the URL fails)
+// 		 * @param override if true, the cluster will be flushed and filled with random blocks first
+// 		 * @param Z the number of blocks in a bucket.
+// 		 * GET and SET will operate using Z.
+// 		 * @param set specifies the set to use for all operations
+// 		 * @param batchLimit the maximum number of requests in a batch.
+// 		 */
+// 		AerospikeStorageAdapter(const number capacity, const number userBlockSize, const bytes key, const string host, const bool override, const number Z, const string set = "default", const number batchLimit = 0);
+// 		~AerospikeStorageAdapter() final;
 
-		protected:
-		void setInternal(const number location, const bytes &raw) final;
-		void getInternal(const number location, bytes &reponse) const final;
+// 		protected:
+// 		void setInternal(const number location, const bytes &raw) final;
+// 		void getInternal(const number location, bytes &reponse) const final;
 
-		void getInternal(const vector<number> &locations, vector<bytes> &response) const final;
+// 		void getInternal(const vector<number> &locations, vector<bytes> &response) const final;
 
-		bool supportsBatchGet() const final { return true; };
-		bool supportsBatchSet() const final { return false; };
-	};
-#endif
-}
+// 		bool supportsBatchGet() const final { return true; };
+// 		bool supportsBatchSet() const final { return false; };
+// 	};
+// #endif
+ }

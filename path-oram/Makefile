@@ -8,13 +8,14 @@ ODIR=obj
 LDIR=lib
 BDIR=bin
 
-LDFLAGS=-L $(LDIR) -L /usr/local/opt/openssl/lib
+LDFLAGS=-L $(LDIR) -L /usr/include/openssl
+
 LDLIBS=-l boost_system -l ssl -l crypto # libs for main code
 REDISLIBS=-l redis++ -l hiredis # libs for redis support
-AEROSPIKELIBS=-l aerospike -l dl -l z # libs for aerospike support
+#AEROSPIKELIBS=-l aerospike -l dl -l z # libs for aerospike support
 LDTESTLIBS=-l gtest -l pthread -l benchmark -l gmock # libs for tests and benchmarks
 
-INCLUDES=-I $(IDIR) -I /usr/local/opt/openssl/include
+INCLUDES=-I $(IDIR) -I /usr/include/openssl
 override CPPFLAGS += --std=c++17 -Wall -Wno-unknown-pragmas -fPIC
 CC=g++
 RM=rm -rf
@@ -23,9 +24,9 @@ ifeq ($(filter -DUSE_REDIS=false,$(CPPFLAGS)),)
 	LDLIBS += $(REDISLIBS)
 endif
 
-ifeq ($(filter -DUSE_AEROSPIKE=false,$(CPPFLAGS)),)
-	LDLIBS += $(AEROSPIKELIBS)
-endif
+# ifeq ($(filter -DUSE_AEROSPIKE=false,$(CPPFLAGS)),)
+# 	LDLIBS += $(AEROSPIKELIBS)
+# endif
 
 LIBNAME=pathoram
 

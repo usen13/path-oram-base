@@ -60,10 +60,10 @@ namespace PathORAM
 				case StorageAdapterTypeRedis:
 					return make_unique<RedisStorageAdapter>(CAPACITY, BLOCK_SIZE, bytes(), REDIS_HOST, true, Z, batchLimit);
 #endif
-#if USE_AEROSPIKE
-				case StorageAdapterTypeAerospike:
-					return make_unique<AerospikeStorageAdapter>(CAPACITY, BLOCK_SIZE, bytes(), AEROSPIKE_HOST, true, Z, "default", batchLimit);
-#endif
+// #if USE_AEROSPIKE
+// 				case StorageAdapterTypeAerospike:
+// 					return make_unique<AerospikeStorageAdapter>(CAPACITY, BLOCK_SIZE, bytes(), AEROSPIKE_HOST, true, Z, "default", batchLimit);
+// #endif
 				default:
 					throw Exception(boost::format("TestingStorageAdapterType %1% is not implemented") % type);
 			}
@@ -109,10 +109,10 @@ namespace PathORAM
 				case StorageAdapterTypeRedis:
 					return make_unique<RedisStorageAdapter>(CAPACITY, BLOCK_SIZE, key, REDIS_HOST, override, Z);
 #endif
-#if USE_AEROSPIKE
-				case StorageAdapterTypeAerospike:
-					return make_unique<AerospikeStorageAdapter>(CAPACITY, BLOCK_SIZE, key, AEROSPIKE_HOST, override, Z);
-#endif
+// #if USE_AEROSPIKE
+// 				case StorageAdapterTypeAerospike:
+// 					return make_unique<AerospikeStorageAdapter>(CAPACITY, BLOCK_SIZE, key, AEROSPIKE_HOST, override, Z);
+// #endif
 				default:
 					throw Exception(boost::format("TestingStorageAdapterType %1% is not persistent") % param);
 			}
@@ -158,11 +158,11 @@ namespace PathORAM
 				ASSERT_ANY_THROW(make_unique<RedisStorageAdapter>(CAPACITY, BLOCK_SIZE, bytes(), "error", false, Z));
 				break;
 #endif
-#if USE_AEROSPIKE
-			case StorageAdapterTypeAerospike:
-				ASSERT_ANY_THROW(make_unique<AerospikeStorageAdapter>(CAPACITY, BLOCK_SIZE, bytes(), "error", false, Z));
-				break;
-#endif
+// #if USE_AEROSPIKE
+// 			case StorageAdapterTypeAerospike:
+// 				ASSERT_ANY_THROW(make_unique<AerospikeStorageAdapter>(CAPACITY, BLOCK_SIZE, bytes(), "error", false, Z));
+// 				break;
+// #endif
 			default:
 				SUCCEED();
 				break;
@@ -445,10 +445,10 @@ namespace PathORAM
 			case StorageAdapterTypeRedis:
 				return "Redis";
 #endif
-#if USE_AEROSPIKE
-			case StorageAdapterTypeAerospike:
-				return "Aerospike";
-#endif
+// #if USE_AEROSPIKE
+// 			case StorageAdapterTypeAerospike:
+// 				return "Aerospike";
+// #endif
 			default:
 				throw Exception(boost::format("TestingStorageAdapterType %1% is not implemented") % input.param);
 		}
@@ -476,34 +476,34 @@ namespace PathORAM
 		}
 #endif
 
-#if USE_AEROSPIKE
-		for (auto host : vector<string>{"127.0.0.1", "aerospike"})
-		{
-			try
-			{
-				// test if Aerospike is availbale
-				as_config config;
-				as_config_init(&config);
-				as_config_add_host(&config, host.c_str(), 3000);
+// #if USE_AEROSPIKE
+// 		for (auto host : vector<string>{"127.0.0.1", "aerospike"})
+// 		{
+// 			try
+// 			{
+// 				// test if Aerospike is availbale
+// 				as_config config;
+// 				as_config_init(&config);
+// 				as_config_add_host(&config, host.c_str(), 3000);
 
-				aerospike aerospike;
-				aerospike_init(&aerospike, &config);
+// 				aerospike aerospike;
+// 				aerospike_init(&aerospike, &config);
 
-				as_error err;
-				aerospike_connect(&aerospike, &err);
+// 				as_error err;
+// 				aerospike_connect(&aerospike, &err);
 
-				if (err.code == AEROSPIKE_OK)
-				{
-					result.push_back(StorageAdapterTypeAerospike);
-					PathORAM::StorageAdapterTest::AEROSPIKE_HOST = host;
-					break;
-				}
-			}
-			catch (...)
-			{
-			}
-		}
-#endif
+// 				if (err.code == AEROSPIKE_OK)
+// 				{
+// 					result.push_back(StorageAdapterTypeAerospike);
+// 					PathORAM::StorageAdapterTest::AEROSPIKE_HOST = host;
+// 					break;
+// 				}
+// 			}
+// 			catch (...)
+// 			{
+// 			}
+// 		}
+// #endif
 
 		return result;
 	};
