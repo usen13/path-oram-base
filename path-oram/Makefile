@@ -8,7 +8,9 @@ ODIR=obj
 LDIR=lib
 BDIR=bin
 
-LDFLAGS=-L $(LDIR) -L /usr/include/openssl
+CXXFLAGS= -I/usr/include/gtest -I/usr/include/gtest -I/usr/include -pthread
+
+LDFLAGS=-L $(LDIR) -L /usr/include/openssl -lgtest -lgtest_main -pthread
 
 LDLIBS=-l boost_system -l ssl -l crypto # libs for main code
 REDISLIBS=-l redis++ -l hiredis # libs for redis support

@@ -84,7 +84,7 @@ namespace PathORAM
 	/**
 	 * @brief A PathORAM implementation of the position map adapter.
 	 *
-	 * Uses an instance of PathORAM as the sotrage for the map.
+	 * Uses an instance of PathORAM as the storage for the map.
 	 */
 	class ORAMPositionMapAdapter : public AbsPositionMapAdapter
 	{
