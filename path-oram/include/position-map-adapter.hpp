@@ -10,7 +10,7 @@ namespace PathORAM
 	using namespace std;
 
 	/**
-	 * @brief Abstraction over position map
+	 * @brief Abstraction over position map, functions shoulld be overwriten by the inheriting class.
 	 */
 	class AbsPositionMapAdapter
 	{
