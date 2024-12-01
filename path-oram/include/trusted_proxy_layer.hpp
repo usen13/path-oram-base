@@ -22,7 +22,7 @@ namespace PathORAM
      * 6. Stores the result in the cache.
      * 7. Manages re write/change of the node in the binary tree.
 	 */
-    class TrustedProxyLayer
+    class TrustedProxyLayer : public AbsCacheAdapter, public AbsStashAdapter, public AbsPositionMapAdapter
     {
         public:
         /**
@@ -32,19 +32,37 @@ namespace PathORAM
          * @param sourceFile file which needs to be encrypted
          * @param key the key to use AEAD encryption
          */
-        void createSecretSharedData(const char *targetFile, const char *sourceFile, const unsigned char key[crypto_secretstream_xchacha20poly1305_KEYBYTES]);
+        static int createSecretSharedData(const char *targetFile, const char *sourceFile, const unsigned char key[crypto_secretstream_xchacha20poly1305_KEYBYTES]);
         /**
          * @brief create secret shared data for the client
          *
-         * @param block block in question
-         * @param response response to be populated
+         * @param targetFile the decrypted file  
+         * @param sourceFile various shares of the secret shared data
+         * @param key key shares to decrypt the secret shared data
          */
-        void decryptData(const number block, bytes &response);
-        
-        private:
+        static int decryptSecretSharedData(const char *targetFile, const char *sourceFile, const unsigned char key[crypto_secretstream_xchacha20poly1305_KEYBYTES]);
+        /**
+         * @brief splits the keys to be shared among the servers
+         *
+         * @param array takes the AEAD key to be split
+         */
+        void split_keys(unsigned char array[]);
+        /**
+         * @brief function to check if the total shares are less than the minimum shares required
+         *
+         */
+        void check(); // Probably not needed since the value is hardcoded
 
         int nSharesTotal = 6; // Total secret shared to be created for the data and keys
         int minShares = 3;  // Minimum number of shares required to reconstruct the data
+
+        // Initialize the constructor with the total shares and minimum shares required.
+        TrustedProxyLayer(const int nSharesTotal, const int minShares);
+
+        // The destructor for the Trusted Proxy Layer
+        ~TrustedProxyLayer();
+
+        private:
 
     };
 }

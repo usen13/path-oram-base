@@ -1,23 +1,22 @@
 {
-	"configurations": [
-		{
-			"name": "Mac",
-			"includePath": [
-				"${workspaceFolder}/**",
-				"${workspaceFolder}/path-oram/include/*",
-				"/usr/local/Cellar/boost/1.72.0/include",
-				"/usr/local/opt/openssl/include"
-			],
-			"defines": [],
-			"macFrameworkPath": [
-				"/System/Library/Frameworks",
-				"/Library/Frameworks"
-			],
-			"compilerPath": "/usr/bin/clang",
-			"cStandard": "c11",
-			"cppStandard": "c++17",
-			"intelliSenseMode": "clang-x64"
-		}
-	],
-	"version": 4
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "/home/utsavsen/Desktop/Thesis_Implementation/path-oram/path-oram/*",
+                "/home/utsavsen/Desktop/Thesis_Implementation/path-oram/path-oram/include/*",
+                "/usr/include/boost/**",
+                "/usr/bin/**",
+                "/usr/local/include/**"
+            ],
+            "defines": [
+                "USE_REDIS"
+            ],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "linux-gcc-x64"
+        }
+    ],
+    "version": 4
 }
