@@ -59,7 +59,7 @@ namespace PathORAM
 		 *
 		 * @param block block ID of the block
 		 */
-		virtual void remove(const number block) = 0;
+		virtual void deleteBlock(const number block) = 0;
 
 		virtual ~AbsStashAdapter() = 0;
 
@@ -114,7 +114,7 @@ namespace PathORAM
 		void add(const number block, const bytes &data) final;
 		void update(const number block, const bytes &data) final;
 		void get(const number block, bytes &response) const final;
-		void remove(const number block) final;
+		void deleteBlock(const number block) final;
 
 		/**
 		 * @brief Returns the current size of the stash (in blocks)

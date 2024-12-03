@@ -63,7 +63,7 @@ namespace PathORAM
 		}
 	}
 
-	void InMemoryStashAdapter::remove(const number block)
+	void InMemoryStashAdapter::deleteBlock(const number block)
 	{
 		stash.erase(block);
 	}

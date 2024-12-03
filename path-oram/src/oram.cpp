@@ -270,7 +270,7 @@ namespace PathORAM
 		// update the stash adapter, remove newly inserted blocks
 		for (auto &&removed : toDelete)
 		{
-			stash->remove(removed);
+			stash->deleteBlock(removed);
 		}
 	}
 

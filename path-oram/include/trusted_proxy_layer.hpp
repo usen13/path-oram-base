@@ -48,6 +48,13 @@ namespace PathORAM
          */
         void split_keys(unsigned char array[]);
         /**
+         * @brief main function which is invoked to create the secret shared data and keys
+         * 
+         * @param argc number of arguments
+         * @param argv arguments passed to the function
+         */
+        int shamirSecretSharing(int argc, char** argv);
+        /**
          * @brief function to check if the total shares are less than the minimum shares required
          *
          */

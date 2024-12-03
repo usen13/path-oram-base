@@ -28,7 +28,7 @@ namespace PathORAM
 			adapter->add(5uLL, bytes());
 			vector<block> got;
 			adapter->getAll(got);
-			adapter->remove(5uLL);
+			adapter->deleteBlock(5uLL);
 		});
 	}
 
@@ -84,7 +84,7 @@ namespace PathORAM
 			adapter->add(i, bytes());
 		}
 		ASSERT_ANY_THROW(adapter->add(CAPACITY + 1, bytes()));
-		adapter->remove(0uLL);
+		adapter->deleteBlock(0uLL);
 		ASSERT_NO_THROW(adapter->add(CAPACITY + 1, bytes()));
 		ASSERT_NO_THROW(adapter->add(CAPACITY + 1, bytes())); // duplicate key should not be inserted
 	}
@@ -96,7 +96,7 @@ namespace PathORAM
 			adapter->update(i, bytes());
 		}
 		ASSERT_ANY_THROW(adapter->update(CAPACITY + 1, bytes()));
-		adapter->remove(0uLL);
+		adapter->deleteBlock(0uLL);
 		ASSERT_NO_THROW(adapter->update(CAPACITY + 1, bytes()));
 		ASSERT_NO_THROW(adapter->update(CAPACITY + 1, bytes())); // duplicate key should not be inserted
 	}
