@@ -243,8 +243,7 @@ namespace PathORAM
                 double esecs = double(end - begin) / CLOCKS_PER_SEC;
                 printf("\nEncrypted and Split in %f seconds.\n\n", esecs);
             }
-            // TODO:: Define the else help function
-            //else help();
+            else help();
         }
         return 0;   
     }
