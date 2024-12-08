@@ -22,7 +22,7 @@ namespace PathORAM
      * 6. Stores the result in the cache.
      * 7. Manages re write/change of the node in the binary tree.
 	 */
-    class TrustedProxyLayer : public AbsCacheAdapter, public AbsStashAdapter, public AbsPositionMapAdapter
+    class TrustedProxyLayer //: public AbsCacheAdapter, public AbsStashAdapter, public AbsPositionMapAdapter
     {
         public:
         /**

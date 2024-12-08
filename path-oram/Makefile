@@ -10,7 +10,7 @@ BDIR=bin
 
 CXXFLAGS= -I/usr/include/gtest -I/usr/include/gtest -I/usr/include -pthread
 
-LDFLAGS=-L $(LDIR) -L /usr/include/openssl -lgtest -lgtest_main -pthread
+LDFLAGS=-L $(LDIR) -L /usr/include/openssl -lgtest -lgtest_main -pthread -lsodium
 
 LDLIBS=-l boost_system -l ssl -l crypto # libs for main code
 REDISLIBS=-l redis++ -l hiredis # libs for redis support
