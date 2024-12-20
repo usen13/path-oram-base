@@ -148,209 +148,80 @@ int reconstructSecret(const std::vector<std::pair<int, int>>& shares, int k) {
     return static_cast<int>(std::round(secret));
 }
 
-int main(int argc, char** argv) {
-    if (argc < 3 || argc > 4) {
-        std::cout << "Usage: " << argv[0] << " <encrypt/decrypt> <attributeID> <file>" << std::endl;
-        std::cout << "Options:" << std::endl;
-        std::cout << "1: Encrpypt" << std::endl;
-        std::cout << "2: Reconstruct secret (Decrypt)" << std::endl;
-        std::cout << "Possible attributeID options are: " << std::endl;
-        std::cout << "1: orderkey" << std::endl;
-        std::cout << "2: partkey" << std::endl;
-        std::cout << "3: suppkey" << std::endl;
-        std::cout << "4: linenumber" << std::endl;
-        std::cout << "5: quantity" << std::endl;
-        std::cout << "6: extendedprice" << std::endl;
-        std::cout << "7: discount" << std::endl;
-        std::cout << "8: tax" << std::endl;
-        std::cout << "9: returnflag" << std::endl;
-        std::cout << "10: linestatus" << std::endl;
-        std::cout << "11: shipdate" << std::endl;
-        std::cout << "12: commitdate" << std::endl;
-        std::cout << "13: receiptdate" << std::endl;
-        std::cout << "14: shipinstruct" << std::endl;
-        std::cout << "15: shipmode" << std::endl;
-        std::cout << "16: comment" << std::endl;
-        std::cout << "17: all" << std::endl;
+std::vector<std::vector<std::pair<int, int>>> shamirSecretSharingAllAttributes(const LineItem& item, int n, int k) {
+    std::vector<std::vector<std::pair<int, int>>> allShares(16);
 
+    auto shareAttribute = [&](int secret) {
+        return shamirSecretSharing(secret, n, k);
+    };
+
+    allShares[0] = shareAttribute(item.L_ORDERKEY);
+    allShares[1] = shareAttribute(item.L_PARTKEY);
+    allShares[2] = shareAttribute(item.L_SUPPKEY);
+    allShares[3] = shareAttribute(item.L_LINENUMBER);
+    allShares[4] = shareAttribute(item.L_QUANTITY);
+    allShares[5] = shareAttribute(static_cast<int>(item.L_EXTENDEDPRICE));
+    allShares[6] = shareAttribute(static_cast<int>(item.L_DISCOUNT));
+    allShares[7] = shareAttribute(static_cast<int>(item.L_TAX));
+    allShares[8] = shareAttribute(item.L_RETURNFLAG[0]);
+    allShares[9] = shareAttribute(item.L_LINESTATUS[0]);
+    allShares[10] = shareAttribute(std::stoi(item.L_SHIPDATE));
+    allShares[11] = shareAttribute(std::stoi(item.L_COMMITDATE));
+    allShares[12] = shareAttribute(std::stoi(item.L_RECEIPTDATE));
+    allShares[13] = shareAttribute(item.L_SHIPINSTRUCT[0]);
+    allShares[14] = shareAttribute(item.L_SHIPMODE[0]);
+    allShares[15] = shareAttribute(item.L_COMMENT[0]);
+
+    return allShares;
+}
+
+void saveAllShares(const std::vector<std::vector<std::pair<int, int>>>& allShares, int tupleId) {
+    for (size_t i = 0; i < allShares[0].size(); ++i) {
+        std::ofstream file("server_" + std::to_string(i + 1) + "_tuple_" + std::to_string(tupleId) + ".txt");
+        if (file.is_open()) {
+            for (const auto& shares : allShares) {
+                file << shares[i].first << " " << shares[i].second << " ";
+            }
+            file << "\n";
+            file.close();
+        }
+    }
+}
+
+int main(int argc, char** argv) {
+    if (argc != 3) {
+        std::cout << "Usage: " << argv[0] << " <encrypt/decrypt> <file>" << std::endl;
         return 1;
     }
 
     std::string option = argv[1];
-    int attributeID = std::stoi(argv[2]);
+    std::string filename = argv[2];
 
-    if (option == "encrypt" && argc == 4) {
-        std::string filename = argv[3];
+    if (option == "encrypt") {
         auto lineItems = parseLineItemFile(filename);
 
-        std::vector<std::string> orderkey, partkey, suppkey, linenumber, returnFlag, lineStatus, shipDate, commitDate, receiptDate, shipInstruct, shipMode, comment;
-        for (const auto& item : lineItems) {
-            orderkey.push_back(std::to_string(item.L_ORDERKEY));
-            partkey.push_back(std::to_string(item.L_PARTKEY));
-            suppkey.push_back(std::to_string(item.L_SUPPKEY));
-            linenumber.push_back(std::to_string(item.L_LINENUMBER));
-            returnFlag.push_back(item.L_RETURNFLAG);
-            lineStatus.push_back(item.L_LINESTATUS);
-            shipDate.push_back(item.L_SHIPDATE);
-            commitDate.push_back(item.L_COMMITDATE);
-            receiptDate.push_back(item.L_RECEIPTDATE);
-            shipInstruct.push_back(item.L_SHIPINSTRUCT);
-            shipMode.push_back(item.L_SHIPMODE);
-            comment.push_back(item.L_COMMENT);
+        for (size_t i = 0; i < lineItems.size(); ++i) {
+            auto allShares = shamirSecretSharingAllAttributes(lineItems[i], 6, 3);
+            saveAllShares(allShares, i + 1);
         }
-
-        auto orderkeyMap = mapUniqueValues(orderkey); 
-        auto partkeyMap = mapUniqueValues(partkey);
-        auto suppkeyMap = mapUniqueValues(suppkey);
-        auto linenumberMap = mapUniqueValues(linenumber);
-        auto returnFlagMap = mapUniqueValues(returnFlag);
-        auto lineStatusMap = mapUniqueValues(lineStatus);
-        auto shipDateMap = mapUniqueValues(shipDate);
-        auto commitDateMap = mapUniqueValues(commitDate);
-        auto receiptDateMap = mapUniqueValues(receiptDate);
-        auto shipInstructMap = mapUniqueValues(shipInstruct);
-        auto shipModeMap = mapUniqueValues(shipMode);
-        auto commentMap = mapUniqueValues(comment);
-
-        switch (attributeID) {
-            case orderKeyID:
-                for (size_t i = 0; i < orderkey.size(); ++i) {
-                    int secret = orderkeyMap[orderkey[i]];
-                    auto shares = shamirSecretSharing(secret, 6, 3);
-                    saveShares(shares, i + 1);
-                }
-                break;
-            case partKeyID:
-                for(size_t i = 0; i < partkey.size(); ++i) {
-                    int secret = partkeyMap[partkey[i]];
-                    auto shares = shamirSecretSharing(secret, 6, 3);
-                    saveShares(shares, i + 1);
-                }
-                break;
-            case suppKeyID:
-                for(size_t i = 0; i < suppkey.size(); ++i) {
-                    int secret = lineItems[i].L_SUPPKEY;
-                    auto shares = shamirSecretSharing(secret, 6, 3);
-                    saveShares(shares, i + 1);
-                }
-                break;
-            case lineNumberID:
-                for(size_t i = 0; i < lineItems.size(); ++i) {
-                    int secret = lineItems[i].L_LINENUMBER;
-                    auto shares = shamirSecretSharing(secret, 6, 3);
-                    saveShares(shares, i + 1);
-                }
-                break;
-            case quantityID:
-                for(size_t i = 0; i < lineItems.size(); ++i) {
-                    int secret = lineItems[i].L_QUANTITY;
-                    auto shares = shamirSecretSharing(secret, 6, 3);
-                    saveShares(shares, i + 1);
-                }
-                break;
-            case extendedPriceID:
-                for(size_t i = 0; i < lineItems.size(); ++i) {
-                    int secret = lineItems[i].L_EXTENDEDPRICE;
-                    auto shares = shamirSecretSharing(secret, 6, 3);
-                    saveShares(shares, i + 1);
-                }
-                break;
-            case discountID:
-                for(size_t i = 0; i < lineItems.size(); ++i) {
-                    int secret = lineItems[i].L_DISCOUNT;
-                    auto shares = shamirSecretSharing(secret, 6, 3);
-                    saveShares(shares, i + 1);
-                }
-                break;
-            case taxID:
-                for(size_t i = 0; i < lineItems.size(); ++i) {
-                    int secret = lineItems[i].L_TAX;
-                    auto shares = shamirSecretSharing(secret, 6, 3);
-                    saveShares(shares, i + 1);
-                }
-                break;
-            case returnFlagID:
-                for(size_t i = 0; i < lineItems.size(); ++i) {
-                    int secret = lineItems[i].L_RETURNFLAG[0];
-                    auto shares = shamirSecretSharing(secret, 6, 3);
-                    saveShares(shares, i + 1);
-                }
-                break;
-            case lineStatusID:
-                for(size_t i = 0; i < lineItems.size(); ++i) {
-                    int secret = lineItems[i].L_LINESTATUS[0];
-                    auto shares = shamirSecretSharing(secret, 6, 3);
-                    saveShares(shares, i + 1);
-                }
-                break;
-            case shipDateID:
-                for(size_t i = 0; i < lineItems.size(); ++i) {
-                    int secret = std::stoi(lineItems[i].L_SHIPDATE);
-                    auto shares = shamirSecretSharing(secret, 6, 3);
-                    saveShares(shares, i + 1);
-                }
-                break;
-            case commitDateID:
-                for(size_t i = 0; i < lineItems.size(); ++i) {
-                    int secret = std::stoi(lineItems[i].L_COMMITDATE);
-                    auto shares = shamirSecretSharing(secret, 6, 3);
-                    saveShares(shares, i + 1);
-                }
-                break;
-            case receiptDateID:
-                for(size_t i = 0; i < lineItems.size(); ++i) {
-                    int secret = std::stoi(lineItems[i].L_RECEIPTDATE);
-                    auto shares = shamirSecretSharing(secret, 6, 3);
-                    saveShares(shares, i + 1);
-                }
-                break;
-            case shipInStructID:
-                for(size_t i = 0; i < lineItems.size(); ++i) {
-                    int secret = lineItems[i].L_SHIPINSTRUCT[0];
-                    auto shares = shamirSecretSharing(secret, 6, 3);
-                    saveShares(shares, i + 1);
-                }
-                break;
-            case shipModeID:
-                for(size_t i = 0; i < lineItems.size(); ++i) {
-                    int secret = shipModeMap[lineItems[i].L_SHIPMODE];
-                    auto shares = shamirSecretSharing(secret, 6, 3);
-                    saveShares(shares, i + 1);
-                }
-                break;
-            case commentID:
-                for(size_t i = 0; i < lineItems.size(); ++i) {
-                    int secret = lineItems[i].L_COMMENT[0];
-                    auto shares = shamirSecretSharing(secret, 6, 3);
-                    saveShares(shares, i + 1);
-                }
-                break;
-            default:
-                for (size_t i = 0; i < lineItems.size(); ++i) {
-                    int secret = lineItems[i].L_ORDERKEY;
-                    auto shares = shamirSecretSharing(secret, 6, 3);
-                    saveShares(shares, i + 1);
-                }
-                break;
-        }
-    } else if (option == "decrypt" && argc == 4) {
-        std::vector<std::pair<int, int>> shares;
-        int attributeID = std::stoi(argv[2]);
-        std::string outputFilename = argv[3];
-        std::vector<int> reconstructedSecrets;
+    } else if (option == "decrypt") {
+        std::vector<LineItem> reconstructedItems;
 
         for (size_t tupleIndex = 1; ; ++tupleIndex) {
-            shares.clear();
+            std::vector<std::vector<std::pair<int, int>>> allShares(16);
             bool fileExists = true;
-            for (int serverIndex = 1; serverIndex <= 3; ++serverIndex) {
+
+            for (int serverIndex = 1; serverIndex <= 6; ++serverIndex) {
                 std::ifstream file("server_" + std::to_string(serverIndex) + "_tuple_" + std::to_string(tupleIndex) + ".txt");
                 if (file.is_open()) {
-                    int x, y;
-                    if (file >> x >> y) {
-                        shares.emplace_back(x, y);
-                    } else {
-                        std::cerr << "Error reading from file: server_" << serverIndex << "_tuple_" << tupleIndex << ".txt" << std::endl;
-                        return 1;
+                    for (auto& shares : allShares) {
+                        int x, y;
+                        if (file >> x >> y) {
+                            shares.emplace_back(x, y);
+                        } else {
+                            std::cerr << "Error reading from file: server_" << serverIndex << "_tuple_" << tupleIndex << ".txt" << std::endl;
+                            return 1;
+                        }
                     }
                     file.close();
                 } else {
@@ -361,27 +232,44 @@ int main(int argc, char** argv) {
             if (!fileExists) {
                 break;
             }
-            if (shares.size() < 3) {
-                std::cerr << "Not enough shares to reconstruct the secret for tuple " << tupleIndex << "." << std::endl;
-                return 1;
-            }
-            int secret = reconstructSecret(shares, 3);
-            reconstructedSecrets.push_back(secret);
+
+            LineItem item;
+            item.L_ORDERKEY = reconstructSecret(allShares[0], 3);
+            item.L_PARTKEY = reconstructSecret(allShares[1], 3);
+            item.L_SUPPKEY = reconstructSecret(allShares[2], 3);
+            item.L_LINENUMBER = reconstructSecret(allShares[3], 3);
+            item.L_QUANTITY = reconstructSecret(allShares[4], 3);
+            item.L_EXTENDEDPRICE = reconstructSecret(allShares[5], 3);
+            item.L_DISCOUNT = reconstructSecret(allShares[6], 3);
+            item.L_TAX = reconstructSecret(allShares[7], 3);
+            item.L_RETURNFLAG = static_cast<char>(reconstructSecret(allShares[8], 3));
+            item.L_LINESTATUS = static_cast<char>(reconstructSecret(allShares[9], 3));
+            item.L_SHIPDATE = std::to_string(reconstructSecret(allShares[10], 3));
+            item.L_COMMITDATE = std::to_string(reconstructSecret(allShares[11], 3));
+            item.L_RECEIPTDATE = std::to_string(reconstructSecret(allShares[12], 3));
+            item.L_SHIPINSTRUCT = static_cast<char>(reconstructSecret(allShares[13], 3));
+            item.L_SHIPMODE = static_cast<char>(reconstructSecret(allShares[14], 3));
+            item.L_COMMENT = static_cast<char>(reconstructSecret(allShares[15], 3));
+
+            reconstructedItems.push_back(item);
         }
 
-        std::ofstream outputFile(outputFilename);
+        std::ofstream outputFile(filename);
         if (outputFile.is_open()) {
-            for (const auto& secret : reconstructedSecrets) {
-                outputFile << secret << std::endl;
+            for (const auto& item : reconstructedItems) {
+                outputFile << item.L_ORDERKEY << "|" << item.L_PARTKEY << "|" << item.L_SUPPKEY << "|" << item.L_LINENUMBER << "|"
+                           << item.L_QUANTITY << "|" << item.L_EXTENDEDPRICE << "|" << item.L_DISCOUNT << "|" << item.L_TAX << "|"
+                           << item.L_RETURNFLAG << "|" << item.L_LINESTATUS << "|" << item.L_SHIPDATE << "|" << item.L_COMMITDATE << "|"
+                           << item.L_RECEIPTDATE << "|" << item.L_SHIPINSTRUCT << "|" << item.L_SHIPMODE << "|" << item.L_COMMENT << "\n";
             }
             outputFile.close();
         } else {
-            std::cerr << "Error opening output file: " << outputFilename << std::endl;
+            std::cerr << "Error opening output file: " << filename << std::endl;
             return 1;
         }
-        std::cout << "Reconstructed secrets written to: " << outputFilename << std::endl;
+        std::cout << "Reconstructed tuples written to: " << filename << std::endl;
     } else {
-        std::cout << "Invalid arguments." << std::endl;
+        std::cout << "Invalid option." << std::endl;
         return 1;
     }
 
