@@ -6,6 +6,8 @@
 #include <string>
 #include <random>
 #include <cmath>
+#include <ctime>
+#include <iomanip>
 
 struct LineItem {
     int L_ORDERKEY;
@@ -148,6 +150,43 @@ int reconstructSecret(const std::vector<std::pair<int, int>>& shares, int k) {
     return static_cast<int>(std::round(secret));
 }
 
+// Function to convert date string to Unix timestamp
+int dateToTimestamp(const std::string& date) {
+    std::tm tm = {};
+    std::istringstream ss(date);
+    ss >> std::get_time(&tm, "%Y-%m-%d");
+    return std::mktime(&tm);
+}
+
+// Convert Unix timestamp to date string
+std::string timestampToDate(int timestamp) {
+    std::time_t time = timestamp;
+    std::tm* tm = std::localtime(&time);
+    std::ostringstream ss;
+    ss << std::put_time(tm, "%Y-%m-%d");
+    return ss.str();
+}
+
+// Function to convert string to integer (simple example using ASCII values)
+int stringToInt(const std::string& str) {
+    int result = 0;
+    for (char c : str) {
+        result = result * 256 + static_cast<int>(c);
+    }
+    return result;
+}
+
+// Convert integer to string
+std::string intToString(int value) {
+    std::string result;
+    uint64_t modulus = 997;
+    while (value > 0) {
+        result = static_cast<char>(value % 256) + result;
+        value /= 256;
+    }
+    return result;
+}
+
 std::vector<std::vector<std::pair<int, int>>> shamirSecretSharingAllAttributes(const LineItem& item, int n, int k) {
     std::vector<std::vector<std::pair<int, int>>> allShares(16);
 
@@ -165,12 +204,12 @@ std::vector<std::vector<std::pair<int, int>>> shamirSecretSharingAllAttributes(c
     allShares[7] = shareAttribute(static_cast<int>(item.L_TAX));
     allShares[8] = shareAttribute(item.L_RETURNFLAG[0]);
     allShares[9] = shareAttribute(item.L_LINESTATUS[0]);
-    allShares[10] = shareAttribute(std::stoi(item.L_SHIPDATE));
-    allShares[11] = shareAttribute(std::stoi(item.L_COMMITDATE));
-    allShares[12] = shareAttribute(std::stoi(item.L_RECEIPTDATE));
-    allShares[13] = shareAttribute(item.L_SHIPINSTRUCT[0]);
-    allShares[14] = shareAttribute(item.L_SHIPMODE[0]);
-    allShares[15] = shareAttribute(item.L_COMMENT[0]);
+    allShares[10] = shareAttribute(dateToTimestamp(item.L_SHIPDATE));
+    allShares[11] = shareAttribute(dateToTimestamp(item.L_COMMITDATE));
+    allShares[12] = shareAttribute(dateToTimestamp(item.L_RECEIPTDATE));
+    allShares[13] = shareAttribute(stringToInt(item.L_SHIPINSTRUCT));
+    allShares[14] = shareAttribute(stringToInt(item.L_SHIPMODE));
+    allShares[15] = shareAttribute(stringToInt(item.L_COMMENT));
 
     return allShares;
 }
@@ -244,12 +283,12 @@ int main(int argc, char** argv) {
             item.L_TAX = reconstructSecret(allShares[7], 3);
             item.L_RETURNFLAG = static_cast<char>(reconstructSecret(allShares[8], 3));
             item.L_LINESTATUS = static_cast<char>(reconstructSecret(allShares[9], 3));
-            item.L_SHIPDATE = std::to_string(reconstructSecret(allShares[10], 3));
-            item.L_COMMITDATE = std::to_string(reconstructSecret(allShares[11], 3));
-            item.L_RECEIPTDATE = std::to_string(reconstructSecret(allShares[12], 3));
-            item.L_SHIPINSTRUCT = static_cast<char>(reconstructSecret(allShares[13], 3));
-            item.L_SHIPMODE = static_cast<char>(reconstructSecret(allShares[14], 3));
-            item.L_COMMENT = static_cast<char>(reconstructSecret(allShares[15], 3));
+            item.L_SHIPDATE = timestampToDate(reconstructSecret(allShares[10], 3));
+            item.L_COMMITDATE = timestampToDate(reconstructSecret(allShares[11], 3));
+            item.L_RECEIPTDATE = timestampToDate(reconstructSecret(allShares[12], 3));
+            item.L_SHIPINSTRUCT = intToString(reconstructSecret(allShares[13], 3));
+            item.L_SHIPMODE = intToString(reconstructSecret(allShares[14], 3));
+            item.L_COMMENT = intToString(reconstructSecret(allShares[15], 3));
 
             reconstructedItems.push_back(item);
         }
