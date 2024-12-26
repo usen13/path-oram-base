@@ -282,6 +282,26 @@ std::string intVectorToString(const std::vector<int64_t>& vec) {
     return result;
 }
 
+// Function to convert string to integer (simple example using ASCII values)
+int stringToInt(const std::string& str) {
+    int result = 0;
+    for (char c : str) {
+        result = result * 256 + static_cast<int>(c);
+    }
+    return result;
+}
+
+// Convert integer to string
+std::string intToString(int value) {
+    std::string result;
+    uint64_t modulus = 997;
+    while (value > 0) {
+        result = static_cast<char>(value % 256) + result;
+        value /= 256;
+    }
+    return result;
+}
+
 std::vector<std::vector<std::pair<int, int>>> shamirSecretSharingAllAttributes(const LineItem& item, int n, int k) {
     std::vector<std::vector<std::pair<int, int>>> allShares(16);
 
@@ -291,6 +311,10 @@ std::vector<std::vector<std::pair<int, int>>> shamirSecretSharingAllAttributes(c
 
     auto shareAttributeDouble = [&](double secret) {
         return shamirSecretSharingDouble(secret, n, k);
+    };
+
+    auto shareAttribute = [&](int secret) {
+        return shamirSecretSharingString(secret, n, k);
     };
 
     allShares[0] = shareAttributeInt(item.L_ORDERKEY);
@@ -307,8 +331,24 @@ std::vector<std::vector<std::pair<int, int>>> shamirSecretSharingAllAttributes(c
     allShares[11] = shareAttributeInt(dateToTimestamp(item.L_COMMITDATE));
     allShares[12] = shareAttributeInt(dateToTimestamp(item.L_RECEIPTDATE));
     allShares[13] = shareAttributeInt(stringToInt(item.L_SHIPINSTRUCT));
-    allShares[14] = shareAttributeInt(stringToInt(item.L_SHIPMODE));
-    allShares[15] = shareAttributeInt(stringToInt(item.L_COMMENT));
+     allShares[14] = shareAttributeInt(stringToInt(item.L_SHIPMODE));
+     allShares[15] = shareAttributeInt(stringToInt(item.L_COMMENT));
+
+        // Convert each character of the string separately
+    // auto shipInstructVec = stringToIntVector(item.L_SHIPINSTRUCT);
+    // for (int64_t val : shipInstructVec) {
+    //     allShares[13].push_back(shareAttribute(val));
+    // }
+
+    // auto shipModeVec = stringToIntVector(item.L_SHIPMODE);
+    // for (int64_t val : shipModeVec) {
+    //     allShares[14].push_back(shareAttribute(val));
+    // }
+
+    // auto commentVec = stringToIntVector(item.L_COMMENT);
+    // for (int64_t val : commentVec) {
+    //     allShares[15].push_back(shareAttribute(val));
+    // }
 
     return allShares;
 }
@@ -388,6 +428,25 @@ int main(int argc, char** argv) {
             item.L_SHIPINSTRUCT = intToString(reconstructSecret(allShares[13], 3));
             item.L_SHIPMODE = intToString(reconstructSecret(allShares[14], 3));
             item.L_COMMENT = intToString(reconstructSecret(allShares[15], 3));
+
+            // Reconstruct each character of the string separately
+            // std::vector<int64_t> shipInstructVec;
+            // for (const auto& share : allShares[13]) {
+            //     shipInstructVec.push_back(reconstructSecret({share}, 1));
+            // }
+            // item.L_SHIPINSTRUCT = intVectorToString(shipInstructVec);
+
+            // std::vector<int64_t> shipModeVec;
+            // for (const auto& share : allShares[14]) {
+            //     shipModeVec.push_back(reconstructSecret({share}, 1));
+            // }
+            // item.L_SHIPMODE = intVectorToString(shipModeVec);
+
+            // std::vector<int64_t> commentVec;
+            // for (const auto& share : allShares[15]) {
+            //     commentVec.push_back(reconstructSecret({share}, 1));
+            // }
+            // item.L_COMMENT = intVectorToString(commentVec);
 
             reconstructedItems.push_back(item);
         }
