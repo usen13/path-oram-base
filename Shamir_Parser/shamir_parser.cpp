@@ -8,6 +8,7 @@
 #include <cmath>
 #include <ctime>
 #include <iomanip>
+#include <utility>
 
 struct LineItem {
     int L_ORDERKEY;
@@ -95,6 +96,84 @@ std::unordered_map<T, int> mapUniqueValues(const std::vector<T>& values) {
     return value_map;
 }
 
+// Use an extremely large prime number which fits in int64_t for the modulus to avoid overflow
+const int64_t MODULUS_HUGE =  9999999967;
+
+
+int64_t modInverse(int64_t a, int64_t m) {
+    int64_t m0 = m, t, q;
+    int64_t x0 = 0, x1 = 1;
+
+    if (m == 1)
+        return 0;
+
+    while (a > 1) {
+        q = a / m;
+        t = m;
+        m = a % m, a = t;
+        t = x0;
+        x0 = x1 - q * x0;
+        x1 = t;
+    }
+
+    if (x1 < 0)
+        x1 += m0;
+
+    return x1;
+}
+
+std::vector<std::pair<int, int>> shamirSecretSharingDouble(double secret, int n, int k) {
+    std::vector<int64_t> coefficients(k);
+    std::vector<std::pair<int, int>> shares;
+
+    // Generate random coefficients
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<int64_t> dis(0, 100);
+
+    coefficients[0] = static_cast<int64_t>(secret * 100); // Scale the floating point value
+    for (int i = 1; i < k; ++i) {
+        coefficients[i] = dis(gen);
+    }
+
+    // Generate shares
+    for (int x = 1; x <= n; ++x) {
+        int64_t y = 0;
+        for (int i = 0; i < k; ++i) {
+            y += coefficients[i] * std::pow(x, i);;
+        }
+        shares.emplace_back(x, static_cast<int>(y));
+    }
+
+    return shares;
+}
+
+std::vector<std::pair<int64_t, int64_t>> shamirSecretSharingString(int64_t secret, int n, int k) {
+    std::vector<int64_t> coefficients(k);
+    std::vector<std::pair<int64_t, int64_t>> shares;
+
+    // Generate random coefficients
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<int64_t> dis(1, MODULUS_HUGE - 1);
+
+    coefficients[0] = secret;
+    for (int i = 1; i < k; ++i) {
+        coefficients[i] = dis(gen);
+    }
+
+    // Generate shares
+    for (int x = 1; x <= n; ++x) {
+        int64_t y = 0;
+        for (int i = 0; i < k; ++i) {
+            y = (y + coefficients[i] * static_cast<int64_t>(std::pow(x, i))) % MODULUS_HUGE;
+        }
+        shares.emplace_back(x, (y + MODULUS_HUGE) % MODULUS_HUGE); // Ensure non-negative values
+    }
+
+    return shares;
+}
+
 std::vector<std::pair<int, int>> shamirSecretSharing(int secret, int n, int k) {
     std::vector<int> coefficients(k - 1);
     std::vector<std::pair<int, int>> shares;
@@ -121,6 +200,24 @@ std::vector<std::pair<int, int>> shamirSecretSharing(int secret, int n, int k) {
     return shares;
 }
 
+double reconstructSecretFloat(const std::vector<std::pair<int, int>>& shares, int k) {
+    int64_t secret = 0;
+
+    for (int i = 0; i < k; ++i) {
+        double lagrange_coeff = 1.0;
+
+        for (int j = 0; j < k; ++j) {
+            if (i != j) {
+                lagrange_coeff *= static_cast<double>(-shares[j].first) / (shares[i].first - shares[j].first);
+            }
+        }
+
+        secret = secret + shares[i].second * lagrange_coeff;
+    }
+
+    return static_cast<double>((secret ) / 100.0); // Scale back to floating point
+}
+
 void saveShares(const std::vector<std::pair<int, int>>& shares, int tupleId) {
     for (size_t i = 0; i < shares.size(); ++i) {
         std::ofstream file("server_" + std::to_string(i + 1) + "_tuple_" + std::to_string(tupleId) + ".txt");
@@ -131,14 +228,14 @@ void saveShares(const std::vector<std::pair<int, int>>& shares, int tupleId) {
     }
 }
 
-// Reconstruction (using Lagrange interpolation)
+// // Reconstruction (using Lagrange interpolation)
 int reconstructSecret(const std::vector<std::pair<int, int>>& shares, int k) {
     int secret = 0;
 
-    for (size_t i = 0; i < k; ++i) {
+    for (int i = 0; i < k; ++i) {
         double lagrange_coeff = 1.0;
 
-        for (size_t j = 0; j < k; ++j) {
+        for (int j = 0; j < k; ++j) {
             if (i != j) {
                 lagrange_coeff *= static_cast<double>(-shares[j].first) / (shares[i].first - shares[j].first);
             }
@@ -167,22 +264,20 @@ std::string timestampToDate(int timestamp) {
     return ss.str();
 }
 
-// Function to convert string to integer (simple example using ASCII values)
-int stringToInt(const std::string& str) {
-    int result = 0;
+// Convert string to vector of integers (each character separately)
+std::vector<int64_t> stringToIntVector(const std::string& str) {
+    std::vector<int64_t> result;
     for (char c : str) {
-        result = result * 256 + static_cast<int>(c);
+        result.push_back(static_cast<int64_t>(c));
     }
     return result;
 }
 
-// Convert integer to string
-std::string intToString(int value) {
+// Convert vector of integers to string
+std::string intVectorToString(const std::vector<int64_t>& vec) {
     std::string result;
-    uint64_t modulus = 997;
-    while (value > 0) {
-        result = static_cast<char>(value % 256) + result;
-        value /= 256;
+    for (int64_t val : vec) {
+        result += static_cast<char>(val);
     }
     return result;
 }
@@ -190,26 +285,30 @@ std::string intToString(int value) {
 std::vector<std::vector<std::pair<int, int>>> shamirSecretSharingAllAttributes(const LineItem& item, int n, int k) {
     std::vector<std::vector<std::pair<int, int>>> allShares(16);
 
-    auto shareAttribute = [&](int secret) {
+    auto shareAttributeInt = [&](int secret) {
         return shamirSecretSharing(secret, n, k);
     };
 
-    allShares[0] = shareAttribute(item.L_ORDERKEY);
-    allShares[1] = shareAttribute(item.L_PARTKEY);
-    allShares[2] = shareAttribute(item.L_SUPPKEY);
-    allShares[3] = shareAttribute(item.L_LINENUMBER);
-    allShares[4] = shareAttribute(item.L_QUANTITY);
-    allShares[5] = shareAttribute(static_cast<int>(item.L_EXTENDEDPRICE));
-    allShares[6] = shareAttribute(static_cast<int>(item.L_DISCOUNT));
-    allShares[7] = shareAttribute(static_cast<int>(item.L_TAX));
-    allShares[8] = shareAttribute(item.L_RETURNFLAG[0]);
-    allShares[9] = shareAttribute(item.L_LINESTATUS[0]);
-    allShares[10] = shareAttribute(dateToTimestamp(item.L_SHIPDATE));
-    allShares[11] = shareAttribute(dateToTimestamp(item.L_COMMITDATE));
-    allShares[12] = shareAttribute(dateToTimestamp(item.L_RECEIPTDATE));
-    allShares[13] = shareAttribute(stringToInt(item.L_SHIPINSTRUCT));
-    allShares[14] = shareAttribute(stringToInt(item.L_SHIPMODE));
-    allShares[15] = shareAttribute(stringToInt(item.L_COMMENT));
+    auto shareAttributeDouble = [&](double secret) {
+        return shamirSecretSharingDouble(secret, n, k);
+    };
+
+    allShares[0] = shareAttributeInt(item.L_ORDERKEY);
+    allShares[1] = shareAttributeInt(item.L_PARTKEY);
+    allShares[2] = shareAttributeInt(item.L_SUPPKEY);
+    allShares[3] = shareAttributeInt(item.L_LINENUMBER);
+    allShares[4] = shareAttributeInt(item.L_QUANTITY);
+    allShares[5] = shareAttributeInt(item.L_EXTENDEDPRICE);
+    allShares[6] = shareAttributeDouble(item.L_DISCOUNT);
+    allShares[7] = shareAttributeDouble(item.L_TAX);
+    allShares[8] = shareAttributeInt(item.L_RETURNFLAG[0]);
+    allShares[9] = shareAttributeInt(item.L_LINESTATUS[0]);
+    allShares[10] = shareAttributeInt(dateToTimestamp(item.L_SHIPDATE));
+    allShares[11] = shareAttributeInt(dateToTimestamp(item.L_COMMITDATE));
+    allShares[12] = shareAttributeInt(dateToTimestamp(item.L_RECEIPTDATE));
+    allShares[13] = shareAttributeInt(stringToInt(item.L_SHIPINSTRUCT));
+    allShares[14] = shareAttributeInt(stringToInt(item.L_SHIPMODE));
+    allShares[15] = shareAttributeInt(stringToInt(item.L_COMMENT));
 
     return allShares;
 }
@@ -279,8 +378,8 @@ int main(int argc, char** argv) {
             item.L_LINENUMBER = reconstructSecret(allShares[3], 3);
             item.L_QUANTITY = reconstructSecret(allShares[4], 3);
             item.L_EXTENDEDPRICE = reconstructSecret(allShares[5], 3);
-            item.L_DISCOUNT = reconstructSecret(allShares[6], 3);
-            item.L_TAX = reconstructSecret(allShares[7], 3);
+            item.L_DISCOUNT = reconstructSecretFloat(allShares[6], 3);
+            item.L_TAX = reconstructSecretFloat(allShares[7], 3);
             item.L_RETURNFLAG = static_cast<char>(reconstructSecret(allShares[8], 3));
             item.L_LINESTATUS = static_cast<char>(reconstructSecret(allShares[9], 3));
             item.L_SHIPDATE = timestampToDate(reconstructSecret(allShares[10], 3));
