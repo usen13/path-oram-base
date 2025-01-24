@@ -47,9 +47,6 @@ std::unordered_map<T, int> ShamirParser::mapUniqueValues(const std::vector<T>& v
     return value_map;
 }
 
-// Use an extremely large prime number which fits in int64_t for the modulus to avoid overflow
-const uint64_t MODULUS_HUGE =  9999999967;
-
 std::vector<std::pair<int64_t, int64_t>> ShamirParser::shamirSecretSharingDouble(double& secret, int n, int k) {
     std::vector<int64_t> coefficients(k);
     std::vector<std::pair<int64_t, int64_t>> shares;
@@ -210,17 +207,81 @@ std::vector<std::vector<std::pair<int64_t, int64_t>>> ShamirParser::shamirSecret
     return allShares;
 }
 
+// Function to save shares to files
 void ShamirParser::saveAllShares(const std::vector<std::vector<std::pair<int64_t, int64_t>>>& allShares, int tupleId) {
-    for (size_t i = 0; i < allShares[0].size(); ++i) {
-        std::ofstream file("server_" + std::to_string(i + 1) + "_tuple_" + std::to_string(tupleId) + ".txt");
+    for (size_t i = 0; i < allShares[0].size(); ++i) { // Parse for each share
+        std::ofstream file("server_" + std::to_string(i + 1) + ".txt", std::ios::app);
         if (file.is_open()) {
+            //file << "Tuple " << tupleId << ": ";
             for (const auto& shares : allShares) {
-                file << shares[i].first << " " << shares[i].second << " ";
+                file << "|" << " "<< shares[i].second << " ";
             }
             file << "\n";
             file.close();
         }
     }
+}
+
+std::vector<std::vector<std::vector<int64_t>>> ShamirParser::loadAllShares(int n) {
+    std::vector<std::vector<std::vector<int64_t>>> allShares(n);
+// The format of allShares is as follows:
+// Inner most vector contains the shares for a single tuple, in total 16 shares
+// Middle vector contains all the tuples for a single server, in total n tuples 
+// Outer most vector must contain shares of total n servers, in our case n = 6
+
+    for (int serverIndex = 1; serverIndex <= n; ++serverIndex) {
+        std::ifstream file("server_" + std::to_string(serverIndex) + ".txt", std::ios::in);
+        if (file.is_open()) {
+            std::string line;
+            while (std::getline(file, line)) {
+                std::istringstream iss(line);
+                std::string y_str;
+                std::vector<int64_t> tupleShares;
+                while (std::getline(iss, y_str, '|')) {
+                    // Trim leading and trailing whitespace
+                    y_str.erase(0, y_str.find_first_not_of(" \t\n\r"));
+                    y_str.erase(y_str.find_last_not_of(" \t\n\r") + 1);
+
+                    if (!y_str.empty()) {
+                        tupleShares.push_back(std::stoll(y_str));
+                    }
+                }
+                allShares[serverIndex -1].push_back({tupleShares});
+            }
+            file.close();
+        } else {
+            std::cerr << "Error opening file: server_" << serverIndex << ".txt" << std::endl;
+        }
+    }
+
+    return allShares;
+}
+
+std::vector<std::vector<std::pair<int64_t, int64_t>>> ShamirParser::transformShares(const std::vector<std::vector<std::vector<int64_t>>>& allShares) {
+    std::vector<std::vector<std::pair<int64_t, int64_t>>> transformedShares;
+
+    if (allShares.empty()) {
+        std::cerr << "Error: No shares to transform." << std::endl;
+        return transformedShares;
+    }
+
+    size_t numServers = allShares.size(); // The size of allShares.size is 6, which is the number of servers
+    size_t numTuples = allShares[0].size(); // The size of allShares[0].size() is n, which is the number of tuples
+    size_t numAttributes = allShares[0][0].size(); // Number of attributes, should be 16
+
+    transformedShares.resize(numAttributes);
+
+    for (size_t tupleIndex = 0; tupleIndex < numTuples; ++tupleIndex) { // [0][a][0]
+        for (size_t attributeIndex = 0; attributeIndex < numAttributes; ++attributeIndex) { // [0][0][a]
+            for (size_t serverIndex = 0; serverIndex < numServers; ++serverIndex) { // [a][0][0]
+                if (serverIndex < allShares.size() && tupleIndex < allShares[serverIndex].size() && attributeIndex < allShares[serverIndex][tupleIndex].size()) {
+                    transformedShares[attributeIndex].emplace_back(serverIndex + 1, allShares[serverIndex][tupleIndex][attributeIndex]);
+                }
+            }
+        }
+    }
+
+    return transformedShares;
 }
 
 int main(int argc, char** argv) {
@@ -238,36 +299,14 @@ int main(int argc, char** argv) {
 
         for (size_t i = 0; i < lineItems.size(); ++i) {
             auto allShares = parser.shamirSecretSharingAllAttributes(lineItems[i], 6, 3);
-            parser.saveAllShares(allShares, i + 1);
+            parser.saveAllShares(allShares, i+1);
         }
     } else if (option == "decrypt") {
         std::vector<LineItem> reconstructedItems;
 
-        for (size_t tupleIndex = 1; ; ++tupleIndex) {
-            std::vector<std::vector<std::pair<int64_t, int64_t>>> allShares(16);
-            bool fileExists = true;
-
-            for (int serverIndex = 1; serverIndex <= 6; ++serverIndex) {
-                std::ifstream file("server_" + std::to_string(serverIndex) + "_tuple_" + std::to_string(tupleIndex) + ".txt");
-                if (file.is_open()) {
-                    for (auto& shares : allShares) {
-                        int64_t x, y;
-                        if (file >> x >> y) {
-                            shares.emplace_back(x, y);
-                        } else {
-                            std::cerr << "Error reading from file: server_" << serverIndex << "_tuple_" << tupleIndex << ".txt" << std::endl;
-                            return 1;
-                        }
-                    }
-                    file.close();
-                } else {
-                    fileExists = false;
-                    break;
-                }
-            }
-            if (!fileExists) {
-                break;
-            }
+        //for (size_t tupleIndex = 1; ; ++tupleIndex) {
+            auto tempShares = parser.loadAllShares(6);
+            auto allShares = parser.transformShares(tempShares);
 
             LineItem item;
             item.L_ORDERKEY = parser.reconstructSecret(allShares[0], 3);
@@ -288,7 +327,7 @@ int main(int argc, char** argv) {
             item.L_COMMENT = parser.intToString(parser.reconstructSecret(allShares[15], 3));
 
             reconstructedItems.push_back(item);
-        }
+
 
         std::ofstream outputFile(filename);
         if (outputFile.is_open()) {

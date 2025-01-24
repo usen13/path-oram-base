@@ -63,7 +63,11 @@ class ShamirParser {
         std::string timestampToDate(int64_t timestamp);
         int64_t dateToTimestamp(const std::string& date);
         void saveAllShares(const std::vector<std::vector<std::pair<int64_t, int64_t>>>& allShares, int tupleId);
+        //void saveAllShares(const std::vector<std::vector<std::pair<int64_t, int64_t>>>& allShares);
+        //std::vector<std::vector<std::pair<int64_t, int64_t>>> loadAllShares(int tupleId, int n);
+        std::vector<std::vector<std::vector<int64_t>>> loadAllShares(int n);
         std::vector<LineItem> parseLineItemFile(const std::string& filename);
+        std::vector<std::vector<std::pair<int64_t, int64_t>>> transformShares(const std::vector<std::vector<std::vector<int64_t>>>& allShares);
 
     private:
         // Function for maping unique values which takes a template argument
