@@ -225,7 +225,7 @@ void ShamirParser::saveAllShares(const std::vector<std::vector<std::pair<int64_t
 std::vector<std::vector<std::vector<int64_t>>> ShamirParser::loadAllShares(int n) {
     std::vector<std::vector<std::vector<int64_t>>> allShares(n);
 // The format of allShares is as follows:
-// Inner most vector contains the shares for a single tuple, in total 16 shares
+// Inner most vector contains the shares for a single tuple, in total 16 shares attributes
 // Middle vector contains all the tuples for a single server, in total n tuples 
 // Outer most vector must contain shares of total n servers, in our case n = 6
 
@@ -257,29 +257,39 @@ std::vector<std::vector<std::vector<int64_t>>> ShamirParser::loadAllShares(int n
     return allShares;
 }
 
-std::vector<std::vector<std::pair<int64_t, int64_t>>> ShamirParser::transformShares(const std::vector<std::vector<std::vector<int64_t>>>& allShares) {
-    std::vector<std::vector<std::pair<int64_t, int64_t>>> transformedShares;
+std::vector<std::vector<std::vector<std::pair<int64_t, int64_t>>>> ShamirParser::transformShares(const std::vector<std::vector<std::vector<int64_t>>>& allShares) {
+    std::vector<std::vector<std::vector<std::pair<int64_t, int64_t>>>> transformedShares;
 
     if (allShares.empty()) {
         std::cerr << "Error: No shares to transform." << std::endl;
         return transformedShares;
     }
-
+    
     size_t numServers = allShares.size(); // The size of allShares.size is 6, which is the number of servers
     size_t numTuples = allShares[0].size(); // The size of allShares[0].size() is n, which is the number of tuples
     size_t numAttributes = allShares[0][0].size(); // Number of attributes, should be 16
 
     transformedShares.resize(numAttributes);
 
-    for (size_t tupleIndex = 0; tupleIndex < numTuples; ++tupleIndex) { // [0][a][0]
-        for (size_t attributeIndex = 0; attributeIndex < numAttributes; ++attributeIndex) { // [0][0][a]
-            for (size_t serverIndex = 0; serverIndex < numServers; ++serverIndex) { // [a][0][0]
+    // for (size_t tupleIndex = 0; tupleIndex < numTuples; ++tupleIndex) { // [0][a][0]
+    //     for (size_t attributeIndex = 0; attributeIndex < numAttributes; ++attributeIndex) { // [0][0][a]
+    //         for (size_t serverIndex = 0; serverIndex < numServers; ++serverIndex) { // [a][0][0]
+    //             if (serverIndex < allShares.size() && tupleIndex < allShares[serverIndex].size() && attributeIndex < allShares[serverIndex][tupleIndex].size()) {
+    //                 transformedShares[attributeIndex].emplace_back(serverIndex + 1, allShares[serverIndex][tupleIndex][attributeIndex]);
+    //             }
+    //         }
+    //     }
+    // }
+    for (size_t attributeIndex = 0; attributeIndex < numAttributes; ++attributeIndex) {
+        transformedShares[attributeIndex].resize(numTuples);
+        for (size_t tupleIndex = 0; tupleIndex < numTuples; ++tupleIndex) {
+            for (size_t serverIndex = 0; serverIndex < numServers; ++serverIndex) {
                 if (serverIndex < allShares.size() && tupleIndex < allShares[serverIndex].size() && attributeIndex < allShares[serverIndex][tupleIndex].size()) {
-                    transformedShares[attributeIndex].emplace_back(serverIndex + 1, allShares[serverIndex][tupleIndex][attributeIndex]);
+                    transformedShares[attributeIndex][tupleIndex].emplace_back(serverIndex + 1, allShares[serverIndex][tupleIndex][attributeIndex]);
                 }
             }
         }
-    }
+    }    
 
     return transformedShares;
 }
@@ -307,27 +317,28 @@ int main(int argc, char** argv) {
         //for (size_t tupleIndex = 1; ; ++tupleIndex) {
             auto tempShares = parser.loadAllShares(6);
             auto allShares = parser.transformShares(tempShares);
-
+        // Push all shares into lineitem
+        for (size_t i = 0; i < tempShares[0].size(); ++i) {
             LineItem item;
-            item.L_ORDERKEY = parser.reconstructSecret(allShares[0], 3);
-            item.L_PARTKEY = parser.reconstructSecret(allShares[1], 3);
-            item.L_SUPPKEY = parser.reconstructSecret(allShares[2], 3);
-            item.L_LINENUMBER = parser.reconstructSecret(allShares[3], 3);
-            item.L_QUANTITY = parser.reconstructSecret(allShares[4], 3);
-            item.L_EXTENDEDPRICE = parser.reconstructSecret(allShares[5], 3);
-            item.L_DISCOUNT = parser.reconstructSecretFloat(allShares[6], 3);
-            item.L_TAX = parser.reconstructSecretFloat(allShares[7], 3);
-            item.L_RETURNFLAG = static_cast<char>(parser.reconstructSecret(allShares[8], 3));
-            item.L_LINESTATUS = static_cast<char>(parser.reconstructSecret(allShares[9], 3));
-            item.L_SHIPDATE = parser.timestampToDate(parser.reconstructSecret(allShares[10], 3));
-            item.L_COMMITDATE = parser.timestampToDate(parser.reconstructSecret(allShares[11], 3));
-            item.L_RECEIPTDATE = parser.timestampToDate(parser.reconstructSecret(allShares[12], 3));
-            item.L_SHIPINSTRUCT = parser.intToString(parser.reconstructSecret(allShares[13], 3));
-            item.L_SHIPMODE = parser.intToString(parser.reconstructSecret(allShares[14], 3));
-            item.L_COMMENT = parser.intToString(parser.reconstructSecret(allShares[15], 3));
+            item.L_ORDERKEY = parser.reconstructSecret(allShares[0][i], 3);
+            item.L_PARTKEY = parser.reconstructSecret(allShares[1][i], 3);
+            item.L_SUPPKEY = parser.reconstructSecret(allShares[2][i], 3);
+            item.L_LINENUMBER = parser.reconstructSecret(allShares[3][i], 3);
+            item.L_QUANTITY = parser.reconstructSecret(allShares[4][i], 3);
+            item.L_EXTENDEDPRICE = parser.reconstructSecret(allShares[5][i], 3);
+            item.L_DISCOUNT = parser.reconstructSecretFloat(allShares[6][i], 3);
+            item.L_TAX = parser.reconstructSecretFloat(allShares[7][i], 3);
+            item.L_RETURNFLAG = static_cast<char>(parser.reconstructSecret(allShares[8][i], 3));
+            item.L_LINESTATUS = static_cast<char>(parser.reconstructSecret(allShares[9][i], 3));
+            item.L_SHIPDATE = parser.timestampToDate(parser.reconstructSecret(allShares[10][i], 3));
+            item.L_COMMITDATE = parser.timestampToDate(parser.reconstructSecret(allShares[11][i], 3));
+            item.L_RECEIPTDATE = parser.timestampToDate(parser.reconstructSecret(allShares[12][i], 3));
+            item.L_SHIPINSTRUCT = parser.intToString(parser.reconstructSecret(allShares[13][i], 3));
+            item.L_SHIPMODE = parser.intToString(parser.reconstructSecret(allShares[14][i], 3));
+            item.L_COMMENT = parser.intToString(parser.reconstructSecret(allShares[15][i], 3));
 
             reconstructedItems.push_back(item);
-
+        }
 
         std::ofstream outputFile(filename);
         if (outputFile.is_open()) {
