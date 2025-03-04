@@ -208,11 +208,10 @@ std::vector<std::vector<std::pair<int64_t, int64_t>>> ShamirParser::shamirSecret
 }
 
 // Function to save shares to files
-void ShamirParser::saveAllShares(const std::vector<std::vector<std::pair<int64_t, int64_t>>>& allShares, int tupleId) {
+void ShamirParser::saveAllShares(const std::vector<std::vector<std::pair<int64_t, int64_t>>>& allShares) {
     for (size_t i = 0; i < allShares[0].size(); ++i) { // Parse for each share
         std::ofstream file("server_" + std::to_string(i + 1) + ".txt", std::ios::app);
         if (file.is_open()) {
-            //file << "Tuple " << tupleId << ": ";
             for (const auto& shares : allShares) {
                 file << "|" << " "<< shares[i].second << " ";
             }
@@ -271,15 +270,6 @@ std::vector<std::vector<std::vector<std::pair<int64_t, int64_t>>>> ShamirParser:
 
     transformedShares.resize(numAttributes);
 
-    // for (size_t tupleIndex = 0; tupleIndex < numTuples; ++tupleIndex) { // [0][a][0]
-    //     for (size_t attributeIndex = 0; attributeIndex < numAttributes; ++attributeIndex) { // [0][0][a]
-    //         for (size_t serverIndex = 0; serverIndex < numServers; ++serverIndex) { // [a][0][0]
-    //             if (serverIndex < allShares.size() && tupleIndex < allShares[serverIndex].size() && attributeIndex < allShares[serverIndex][tupleIndex].size()) {
-    //                 transformedShares[attributeIndex].emplace_back(serverIndex + 1, allShares[serverIndex][tupleIndex][attributeIndex]);
-    //             }
-    //         }
-    //     }
-    // }
     for (size_t attributeIndex = 0; attributeIndex < numAttributes; ++attributeIndex) {
         transformedShares[attributeIndex].resize(numTuples);
         for (size_t tupleIndex = 0; tupleIndex < numTuples; ++tupleIndex) {
@@ -309,7 +299,7 @@ int main(int argc, char** argv) {
 
         for (size_t i = 0; i < lineItems.size(); ++i) {
             auto allShares = parser.shamirSecretSharingAllAttributes(lineItems[i], 6, 3);
-            parser.saveAllShares(allShares, i+1);
+            parser.saveAllShares(allShares);
         }
     } else if (option == "decrypt") {
         std::vector<LineItem> reconstructedItems;

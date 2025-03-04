@@ -32,7 +32,8 @@ $(TARGET): $(OBJS)
 
 # Clean up build files
 clean:
-	rm -f $(TARGET) $(OBJS) server_*_tuple_*.txt 
+	rm -f $(TARGET) $(OBJS)	server_*_tuple_*.txt	server_*.txt
+#server_*.txt
 
 # Phony targets
 .PHONY: all clean
