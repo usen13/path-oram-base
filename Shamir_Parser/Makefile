@@ -2,7 +2,7 @@
 CXX = g++
 
 # Compiler flags
-CXXFLAGS = -std=c++11 -Wall -Wextra -g
+CXXFLAGS = -std=c++17 -Wall -Wextra -g
 
 # Linker flags
 LDFLAGS=-L $(LDIR)	-lgtest -lgtest_main -pthread -lsodium -lgmp -lgmpxx
@@ -32,7 +32,8 @@ $(TARGET): $(OBJS)
 
 # Clean up build files
 clean:
-	rm -f $(TARGET) $(OBJS)	server_*_tuple_*.txt	server_*.txt
+	rm -f $(TARGET) $(OBJS)
+	rm -f ../shares/server_*.txt
 #server_*.txt
 
 # Phony targets

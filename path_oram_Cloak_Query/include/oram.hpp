@@ -4,8 +4,6 @@
 #include "position-map-adapter.hpp"
 #include "stash-adapter.hpp"
 #include "storage-adapter.hpp"
-// include ShamirParser/shamir_parser.h here
-#include "../Shamir_Parser/shamir_parser.h"
 
 #include <iostream>
 #include <unordered_map>
@@ -36,7 +34,7 @@ namespace PathORAM
 
 		const number height;  // number of tree levels
 		const number buckets; // total number of buckets
-		const LineItem blocks;  // total number of blocks
+		const number blocks;  // total number of blocks
 
 		const number batchSize; // a max number of requests to process at a time (default 1)
 

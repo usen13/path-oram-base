@@ -55,6 +55,8 @@ BENCHMARKSBIN = $(addprefix $(BDIR)/benchmark-, $(BENCHMARKS))
 INTEGRATION = oram-big
 INTEGRATIONBIN = $(addprefix $(BDIR)/test-, $(INTEGRATION))
 
+TESTSSS = $(BDIR)/test-sss
+
 ENTRYPOINTCC = $(CC) -o $@ $^ $(CPPFLAGS) $(INCLUDES) $(LDLIBS) $(LDTESTLIBS) $(LDFLAGS)
 
 # flags-setting commands
@@ -83,6 +85,18 @@ $(BENCHMARKSBIN): $(OBJ) $$(subst $$(BDIR), $(HDIR), $$@).cpp
 .SECONDEXPANSION:
 $(INTEGRATIONBIN): $(OBJ) $$(subst $$(BDIR), $(TDIR), $$@).cpp
 	$(ENTRYPOINTCC)
+
+$(TESTSSS): $(OBJ) $(TDIR)/test-sss.cpp
+	$(ENTRYPOINTCC)
+
+run-test-sss: $(TESTSSS)
+	$(TESTSSS)
+
+clean-test-sss:
+	$(RM) $(TESTSSS)
+
+debug-test-sss: CPPFLAGS += -g -DTESTING
+debug-test-sss: $(TESTSSS)
 
 shared-debug: CPPFLAGS += -g -DDEBUG
 shared-debug: shared
@@ -151,3 +165,4 @@ clean-binaries:
 .PHONY: profile debug cleandebug
 .PHONY: binaries all shared
 .PHONY: run-tests run-integration run-benchmarks run-shared-lib run-tests-junit
+.PHONY: run-test-sss clean-test-sss debug-test-sss

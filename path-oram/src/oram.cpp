@@ -276,6 +276,7 @@ namespace PathORAM
 
 	number ORAM::bucketForLevelLeaf(const number level, const number leaf) const
 	{
+		std::cout << "leaf: " << leaf << " height: " << height << " level: " << level << std::endl;
 		return (leaf + (1 << (height - 1))) >> (height - 1 - level);
 	}
 

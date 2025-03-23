@@ -3,8 +3,8 @@
         {
             "name": "Linux",
             "includePath": [
-                "/home/utsavsen/Desktop/Thesis_Implementation/path-oram/path-oram/*",
-                "/home/utsavsen/Desktop/Thesis_Implementation/path-oram/path-oram/include/*",
+                "/home/utsavsen/Desktop/Thesis_Implementation/path-oram/path_oram_Cloak_Query/*",
+                "/home/utsavsen/Desktop/Thesis_Implementation/path-oram/path_oram_Cloak_Query/include/*",
                 "/usr/include/boost/**",
                 "/usr/bin/**",
                 "/usr/local/include/**"

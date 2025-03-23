@@ -1,4 +1,5 @@
 #include "shamir_parser.h"
+#include <filesystem>
 
 std::vector<LineItem> ShamirParser::parseLineItemFile(const std::string& filename) {
     std::vector<LineItem> lineItems;
@@ -209,8 +210,13 @@ std::vector<std::vector<std::pair<int64_t, int64_t>>> ShamirParser::shamirSecret
 
 // Function to save shares to files
 void ShamirParser::saveAllShares(const std::vector<std::vector<std::pair<int64_t, int64_t>>>& allShares) {
+    std::string baseDir = "../shares";
+
+    // Creating the directory if it doesn't exist
+    std::filesystem::create_directory(baseDir);
+
     for (size_t i = 0; i < allShares[0].size(); ++i) { // Parse for each share
-        std::ofstream file("server_" + std::to_string(i + 1) + ".txt", std::ios::app);
+        std::ofstream file(baseDir + "/server_" + std::to_string(i + 1) + ".txt", std::ios::app);
         if (file.is_open()) {
             for (const auto& shares : allShares) {
                 file << "|" << " "<< shares[i].second << " ";
