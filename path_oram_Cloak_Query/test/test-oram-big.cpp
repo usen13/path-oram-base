@@ -9,7 +9,7 @@
 
 using namespace std;
 
-namespace PathORAM
+namespace CloakQueryPathORAM
 {
 	enum TestingStorageAdapterType
 	{
@@ -188,7 +188,7 @@ namespace PathORAM
 				auto connection = "tcp://" + host + ":6379";
 				make_unique<sw::redis::Redis>(connection)->ping();
 				result.push_back({5, 3, 32, StorageAdapterTypeRedis, true, false, 1});
-				PathORAM::ORAMBigTest::REDIS_HOST = connection;
+				CloakQueryPathORAM::ORAMBigTest::REDIS_HOST = connection;
 				break;
 			}
 			catch (...)

@@ -10,7 +10,7 @@
 
 using namespace std;
 
-namespace PathORAM
+namespace CloakQueryPathORAM
 {
 	enum TestingPositionMapAdapterType
 	{

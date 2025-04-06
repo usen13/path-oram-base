@@ -18,7 +18,7 @@
 		throw Exception(#statement); \
 	}
 
-namespace PathORAM
+namespace CloakQueryPathORAM
 {
 	using namespace std;
 

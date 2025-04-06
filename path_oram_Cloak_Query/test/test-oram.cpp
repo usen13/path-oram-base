@@ -7,7 +7,7 @@
 
 using namespace std;
 
-namespace PathORAM
+namespace CloakQueryPathORAM
 {
 	class MockStorage : public AbsStorageAdapter
 	{

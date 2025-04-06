@@ -19,7 +19,7 @@
 //     printf("./main -decrypt output_file where ouput_file specifies the \n\n");
 // }
 
-// namespace PathORAM
+// namespace CloakQueryPathORAM
 // {
 
 //     // Creating an object of the TrustedProxyLayer class
@@ -247,4 +247,4 @@
 //         }
 //         return 0;   
 //     }
-// } // namespace PathORAM
+// } // namespace CloakQueryPathORAM

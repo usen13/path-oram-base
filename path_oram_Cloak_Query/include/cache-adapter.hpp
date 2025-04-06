@@ -7,7 +7,7 @@
 #include <chrono>
 #include <memory>
 
-namespace PathORAM
+namespace CloakQueryPathORAM
 {
     using namespace std;
 
@@ -59,4 +59,4 @@ namespace PathORAM
         bool isBlockDirty;
     };
 
-} // namespace PathORAM
+} // namespace CloakQueryPathORAM

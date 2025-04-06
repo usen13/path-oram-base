@@ -233,9 +233,11 @@ std::vector<std::vector<std::vector<int64_t>>> ShamirParser::loadAllShares(int n
 // Inner most vector contains the shares for a single tuple, in total 16 shares attributes
 // Middle vector contains all the tuples for a single server, in total n tuples 
 // Outer most vector must contain shares of total n servers, in our case n = 6
+std::string baseDir = "../shares"; // Relative path to the shares directory
 
-    for (int serverIndex = 1; serverIndex <= n; ++serverIndex) {
-        std::ifstream file("server_" + std::to_string(serverIndex) + ".txt", std::ios::in);
+    for (int serverIndex = 1; serverIndex < n; ++serverIndex) {
+        std::string filePath = baseDir + "/server_" + std::to_string(serverIndex) + ".txt";
+        std::ifstream file(filePath, std::ios::in);
         if (file.is_open()) {
             std::string line;
             while (std::getline(file, line)) {
@@ -251,7 +253,7 @@ std::vector<std::vector<std::vector<int64_t>>> ShamirParser::loadAllShares(int n
                         tupleShares.push_back(std::stoll(y_str));
                     }
                 }
-                allShares[serverIndex -1].push_back({tupleShares});
+                allShares[serverIndex - 1].push_back({tupleShares});
             }
             file.close();
         } else {

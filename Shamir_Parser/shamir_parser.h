@@ -11,14 +11,14 @@
 #include <utility>
 
 struct LineItem {
-    int64_t L_ORDERKEY; // Needed
-    int64_t L_PARTKEY;  // Needed
-    int64_t L_SUPPKEY;  // Needed
-    int64_t L_LINENUMBER;   // Needed
-    int64_t L_QUANTITY; // Needed
-    double L_EXTENDEDPRICE; // Needed
-    double L_DISCOUNT;  // Needed
-    double L_TAX;   // Needed
+    int64_t L_ORDERKEY; // Needed size of order key is 8 bytes
+    int64_t L_PARTKEY;  // Needed size of part key is 8 bytes
+    int64_t L_SUPPKEY;  // Needed size of supp key is 8 bytes
+    int64_t L_LINENUMBER;   // Needed size of line number is 8 bytes
+    int64_t L_QUANTITY; // Needed size of quantity is 8 bytes
+    double L_EXTENDEDPRICE; // Needed size of extended price is 8 bytes
+    double L_DISCOUNT;  // Needed size of discount is 8 bytes
+    double L_TAX;   // Needed size of tax is 8 bytes
     std::string L_RETURNFLAG;
     std::string L_LINESTATUS;
     std::string L_SHIPDATE;
@@ -27,7 +27,7 @@ struct LineItem {
     std::string L_SHIPINSTRUCT;
     std::string L_SHIPMODE;
     std::string L_COMMENT;
-};
+}; // total size of the struct is 13 * 8 + 4 * 4 = 116 bytes
 
 enum AtrributeID {
     orderKeyID = 1,

@@ -8,7 +8,7 @@
 #include <fstream>
 #include <iterator>
 
-namespace PathORAM
+namespace CloakQueryPathORAM
 {
 	using namespace std;
 	using boost::format;

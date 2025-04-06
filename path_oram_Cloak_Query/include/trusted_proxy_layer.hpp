@@ -8,7 +8,7 @@
 
 // #define CHUNK_SIZE 4096
 
-// namespace PathORAM
+// namespace CloakQueryPathORAM
 // {
 //     using namespace std;
 

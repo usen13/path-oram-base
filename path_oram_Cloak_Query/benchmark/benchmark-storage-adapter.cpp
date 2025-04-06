@@ -7,7 +7,7 @@
 
 using namespace std;
 
-namespace PathORAM
+namespace CloakQueryPathORAM
 {
 	enum TestingStorageAdapterType
 	{
@@ -147,13 +147,13 @@ namespace PathORAM
 				// test if Redis is availbale
 				auto connection = "tcp://" + host + ":6379";
 				make_unique<sw::redis::Redis>(connection)->ping();
-				PathORAM::StorageAdapterBenchmark::REDIS_HOST = connection;
+				CloakQueryPathORAM::StorageAdapterBenchmark::REDIS_HOST = connection;
 
 				b
 					->Args({StorageAdapterTypeRedis, 1})
 					->Args({StorageAdapterTypeRedis, 16});
 				iterations									= 1 << 10;
-				PathORAM::StorageAdapterBenchmark::CAPACITY = 1 << 12;
+				CloakQueryPathORAM::StorageAdapterBenchmark::CAPACITY = 1 << 12;
 
 				break;
 			}

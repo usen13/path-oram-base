@@ -14,7 +14,7 @@
 // #include <aerospike/aerospike.h>
 // #endif
 
-namespace PathORAM
+namespace CloakQueryPathORAM
 {
 	using namespace std;
 

@@ -5,7 +5,7 @@
 #include <iostream>
 #include <unordered_map>
 
-namespace PathORAM
+namespace CloakQueryPathORAM
 {
 	using namespace std;
 

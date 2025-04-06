@@ -4,7 +4,7 @@
 
 #include <boost/format.hpp>
 
-namespace PathORAM
+namespace CloakQueryPathORAM
 {
 	using namespace std;
 	using boost::format;
@@ -185,6 +185,37 @@ namespace PathORAM
 			return it->second;
 		}
 		return 0;
+	}
+
+	void ORAM::putContainer(const number block, const vector<vector<int64_t>> &container)
+	{
+		bytes serializedData = serialize(container);
+
+		// Manage the scenario when the data is smaller than the block size
+		uint64_t dataSize = serializedData.size();
+		
+		// Create a new variable with the size of the data
+		bytes dataWithSize(sizeof(dataSize));
+		memcpy(dataWithSize.data(), &dataSize, sizeof(dataSize));
+		// Append the serialized data to variable crafted above
+		dataWithSize.insert(dataWithSize.end(), serializedData.begin(), serializedData.end());
+		// Return the data to the ORAM
+		put(block, dataWithSize);
+	}
+
+	vector<vector<int64_t>> ORAM::getContainer(const number block)
+	{
+		bytes blockData;
+		get(block, blockData);
+
+		// Extract the size of the data
+		uint64_t dataSize = 0;
+		memcpy(&dataSize, blockData.data(), sizeof(dataSize));
+
+		// Extract only the serialized data using the size
+    	bytes serializedData(blockData.begin() + sizeof(dataSize), blockData.begin() + sizeof(dataSize) + dataSize);
+
+		return deserialize(serializedData);
 	}
 
 	void ORAM::readPath(const number leaf, unordered_set<number> &path, const bool putInStash)

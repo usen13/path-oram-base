@@ -4,7 +4,7 @@
 #include <cstring>
 #include <fstream>
 
-namespace PathORAM
+namespace CloakQueryPathORAM
 {
 	using namespace std;
 	using boost::format;

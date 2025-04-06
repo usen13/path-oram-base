@@ -8,7 +8,7 @@
 
 using namespace std;
 
-namespace PathORAM
+namespace CloakQueryPathORAM
 {
 	class ORAMBenchmark : public ::benchmark::Fixture
 	{

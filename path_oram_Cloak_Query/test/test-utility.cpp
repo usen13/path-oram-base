@@ -8,7 +8,7 @@
 
 using namespace std;
 
-namespace PathORAM
+namespace CloakQueryPathORAM
 {
 	class UtilityTest : public ::testing::Test
 	{

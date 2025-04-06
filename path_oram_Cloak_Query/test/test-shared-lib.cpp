@@ -4,7 +4,7 @@
 #include <iostream>
 
 using namespace std;
-using namespace PathORAM;
+using namespace CloakQueryPathORAM;
 
 int main()
 {

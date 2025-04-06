@@ -6,7 +6,7 @@
 
 using namespace std;
 
-namespace PathORAM
+namespace CloakQueryPathORAM
 {
 	class UtilityBenchmark : public ::benchmark::Fixture
 	{

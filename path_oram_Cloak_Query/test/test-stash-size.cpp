@@ -4,13 +4,13 @@
 #include <iostream>
 
 using namespace std;
-using namespace PathORAM;
+using namespace CloakQueryPathORAM;
 
 int main()
 {
 	cout << "Running simulations to observe stash usage..." << endl;
 
-	PathORAM::__blockCipherMode = PathORAM::BlockCipherMode::NONE;
+	CloakQueryPathORAM::__blockCipherMode = CloakQueryPathORAM::BlockCipherMode::NONE;
 
 	const auto LOG_CAPACITY = 11;
 	const auto BLOCK_SIZE	= 32;
@@ -28,7 +28,7 @@ int main()
 	vector<pair<number, bytes>> data;
 	for (number id = 0; id < ELEMENTS; id++)
 	{
-		data.push_back({id, PathORAM::fromText(to_string(id), BLOCK_SIZE)});
+		data.push_back({id, CloakQueryPathORAM::fromText(to_string(id), BLOCK_SIZE)});
 	}
 
 	auto stash = make_shared<InMemoryStashAdapter>(3 * LOG_CAPACITY * Z);
