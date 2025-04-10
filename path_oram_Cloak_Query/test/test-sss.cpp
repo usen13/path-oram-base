@@ -280,7 +280,7 @@ namespace CloakQueryPathORAM
 		}
 
 		// Retrieve and verify the secret shares from each ORAM
-		for (size_t serverIndex = 1; serverIndex < secretShares.size(); ++serverIndex)
+		for (size_t serverIndex = 0; serverIndex < secretShares.size(); ++serverIndex)
 		{
 			// Block ID to retrieve the container
 			number blockID = 1;
@@ -299,8 +299,8 @@ namespace CloakQueryPathORAM
 				for (const auto& vec: retrievedShares[j])
 				{
 					std::cout << vec << " ";
-					std::cout << std::endl;
 				}
+				std::cout << std::endl;
 			}
 		}
 	}
