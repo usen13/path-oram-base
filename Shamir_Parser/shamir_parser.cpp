@@ -301,15 +301,32 @@ int main(int argc, char** argv) {
     std::string option = argv[1];
     std::string filename = argv[2];
     ShamirParser parser;
+    std::string baseDir = "../metrics";
+
+    // Creating the directory if it doesn't exist
+    std::filesystem::create_directory(baseDir);
+    std::ofstream file (baseDir + "/metrics.txt", std::ios::app);
+    if (!file.is_open()) {
+        std::cerr << "Error opening metrics file." << std::endl;
+        return 1;
+    }
 
     if (option == "encrypt") {
+        auto start = std::chrono::high_resolution_clock::now(); // Start timing
         auto lineItems = parser.parseLineItemFile(filename);
 
         for (size_t i = 0; i < lineItems.size(); ++i) {
             auto allShares = parser.shamirSecretSharingAllAttributes(lineItems[i], 6, 3);
             parser.saveAllShares(allShares);
         }
+
+        auto end = std::chrono::high_resolution_clock::now(); // End timing
+        std::chrono::duration<double> elapsed = end - start;
+        std::cout << "Time taken to create secret shares: " << elapsed.count() << " seconds" << std::endl;
+        file << "Encrypt: Time taken to create secret shares: " << elapsed.count() << " seconds" << std::endl;
+
     } else if (option == "decrypt") {
+        auto start = std::chrono::high_resolution_clock::now(); // Start timing
         std::vector<LineItem> reconstructedItems;
 
         //for (size_t tupleIndex = 1; ; ++tupleIndex) {
@@ -352,10 +369,15 @@ int main(int argc, char** argv) {
             return 1;
         }
         std::cout << "Reconstructed tuples written to: " << filename << std::endl;
+
+        auto end = std::chrono::high_resolution_clock::now(); // End timing
+        std::chrono::duration<double> elapsed = end - start;
+        std::cout << "Time taken to decrypt and reconstruct: " << elapsed.count() << " seconds" << std::endl;
+        file << "Decrypt: Time taken to decrypt and reconstruct: " << elapsed.count() << " seconds" << std::endl;
     } else {
         std::cout << "Invalid option." << std::endl;
         return 1;
     }
-
+    file.close();
     return 0;
 }
