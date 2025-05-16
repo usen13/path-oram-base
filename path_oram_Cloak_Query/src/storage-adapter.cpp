@@ -116,7 +116,7 @@ namespace CloakQueryPathORAM
 	void AbsStorageAdapter::set(const request_anyrange requests)
 	{
 		vector<block> writes;
-
+		//std::cout << "Block bucket size: " << requests << std::endl;
 		for (auto &&[location, blocks] : requests)
 		{
 			checkCapacity(location);
@@ -256,6 +256,7 @@ namespace CloakQueryPathORAM
 		blockSize((userBlockSize + AES_BLOCK_SIZE) * Z + AES_BLOCK_SIZE), // IV + Z * (ID + PAYLOAD)
 		userBlockSize(userBlockSize)
 	{
+		std::cout << "Storage has been initialized" << std::endl;
 		if (userBlockSize < 2 * AES_BLOCK_SIZE)
 		{
 			throw Exception(boost::format("block size %1% is too small, need at least %2%") % userBlockSize % (2 * AES_BLOCK_SIZE));
@@ -276,18 +277,36 @@ namespace CloakQueryPathORAM
 	{
 		vector<pair<const number, bucket>> requests;
 		requests.reserve(capacity);
-
+		
 		for (auto i = 0uLL; i < capacity; i++)
 		{
-			bucket bucket;
+			bucket bucketData(Z);
 			for (auto j = 0uLL; j < Z; j++)
 			{
-				bucket.push_back({ULONG_MAX, bytes()});
+				bucketData[j] = {ULONG_MAX, bytes()};
 			}
+			std::cout << "Number of blocks per bucket: " << bucketData.size() << std::endl;
 
-			requests.push_back({i, bucket});
+			// bytes concatenatedData;
+			// // Compute and store the MAC in the last block of the bucket
+			// for (size_t j = 0; j < Z - 1; j++)
+			// {
+			// 	concatenatedData.insert(concatenatedData.end(), bucketData[j].second.begin(), bucketData[j].second.end());
+			// }
+			// bytes mac = hmac(key, concatenatedData);
+
+			// bucketData[Z - 1].first = ULONG_MAX;
+			// bucketData[Z - 1].second = mac; // Use ULONG_MAX as the block ID for the hash
+
+			 requests.push_back({i, bucketData});
 		}
-
+		// for (const auto &request : requests)
+		// {
+    	// 	std::cout << "Request location: " << request.first << ", Bucket size: " << request.second.size() << std::endl;
+		// }
+		std::cout << "Total requests: " << requests.size() << std::endl;
+		std::cout << "Total capacity: " << capacity << std::endl;
+		std::cout << "Total block size: " << blockSize << std::endl;
 		set(boost::make_iterator_range(requests.begin(), requests.end()));
 	}
 

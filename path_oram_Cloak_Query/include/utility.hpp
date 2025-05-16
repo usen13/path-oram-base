@@ -123,4 +123,13 @@ namespace CloakQueryPathORAM
 	 * @return number the hash of the message as a number [0, max)
 	 */
 	number hashToNumber(const bytes &input, number max);
+
+	/**
+	 * @brief compute the hash of an input using HMAC algorithm for a given key.
+	 *
+	 * @param key the key used to create the hash
+	 * @param input the message for which the digest is computed
+	 * @return bytes the hash of the message in bytes
+	 */
+	bytes hmac(const bytes &key, const bytes &input);
 }

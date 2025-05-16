@@ -3,17 +3,20 @@
 #include "utility.hpp"
 
 #include <boost/format.hpp>
+#include <filesystem>
 
 namespace CloakQueryPathORAM
 {
 	using namespace std;
 	using boost::format;
+	bytes ORAM::key;
+	bool ORAM::isKeyGenerated = false;
 
 	ORAM::ORAM(
 		const number logCapacity,
 		const number blockSize,
 		const number Z,
-		const shared_ptr<AbsStorageAdapter> storage,
+		 shared_ptr<AbsStorageAdapter> storage,
 		const shared_ptr<AbsPositionMapAdapter> map,
 		const shared_ptr<AbsStashAdapter> stash,
 		const bool initialize,
@@ -26,8 +29,16 @@ namespace CloakQueryPathORAM
 		height(logCapacity),
 		buckets((number)1 << logCapacity),
 		blocks(((number)1 << logCapacity) * Z),
-		batchSize(batchSize)
+		batchSize(batchSize),
+		isInitializing(initialize)
 	{
+		//Generate a random key for HMAC
+		if (!isKeyGenerated)
+		{
+			key = generateKey();
+			isKeyGenerated = true;
+		}
+		
 		if (initialize)
 		{
 			// fill all blocks with random bits, marks them as "empty"
@@ -38,6 +49,12 @@ namespace CloakQueryPathORAM
 			{
 				map->set(i, getRandomULong(1 << (height - 1)));
 			}
+			
+			// Compute and store MACs for all buckets
+			//computeAndStoreAllBucketMACs();
+
+			// Initialization is complete and the verification of MAC should be done from here on
+			//isInitializing = false;
 		}
 	}
 
@@ -60,8 +77,18 @@ namespace CloakQueryPathORAM
 
 	void ORAM::put(const number block, const bytes &data)
 	{
+		std::cout << "Put function call" << std::endl;
+		std::cout << "Putting data for block: " << block << ", Data size: " << data.size() << std::endl;
 		bytes response;
 		access(false, block, data, response);
+
+		// Debug: Print the size of the bucket after the put operation
+		const auto bucketId = bucketForLevelLeaf(height - 1, block);
+		const auto &bucketData = cache[bucketId];
+		for (const auto &block : bucketData)
+		{
+			std::cout << "Block ID: " << block.first << ", Data Size: " << block.second.size() << std::endl;
+		}
 		syncCache();
 	}
 
@@ -156,6 +183,7 @@ namespace CloakQueryPathORAM
 
 	void ORAM::access(const bool read, const number block, const bytes &data, bytes &response)
 	{
+		std::cout << "Accessing and remapping block: " << block << std::endl;
 		// step 1 from paper: remap block
 		const auto previousPosition = map->get(block);
 		map->set(block, getRandomULong(1 << (height - 1)));
@@ -175,6 +203,29 @@ namespace CloakQueryPathORAM
 
 		// step 4 from paper: write path
 		writePath(previousPosition); // stash updated
+
+		// // Step 5: Compute and store MAC for the bucket
+		// const auto bucketId = bucketForLevelLeaf(height - 1, previousPosition);
+		// bucket bucketData;
+		
+		// // Retrieve the bucket from the cache or storage
+		// if (cache.find(bucketId) != cache.end())
+		// {
+		// 	bucketData = cache[bucketId];
+		// }
+		// else
+		// {
+		// 	vector<block> bucketBlocks;
+		// 	unordered_set<number> bucketLocation = {bucketId};
+		// 	getCache(bucketLocation, bucketBlocks, false);
+		// 	bucketData = bucketBlocks;
+		// }
+		
+		// // Compute and store the MAC
+		// computeAndStoreBucketMAC(bucketData);
+	
+		// // Update the cache with the modified bucket
+		// cache[bucketId] = bucketData;
 	}
 
 	uint64_t ORAM::getAccessCount(const number block) const
@@ -189,22 +240,34 @@ namespace CloakQueryPathORAM
 
 	void ORAM::putContainer(const number block, const vector<vector<int64_t>> &container)
 	{
+		std::cout << "Putting container for block: " << block << std::endl;
 		bytes serializedData = serialize(container);
 
 		// Manage the scenario when the data is smaller than the block size
 		uint64_t dataSize = serializedData.size();
-		
+
+		bytes macSerializedData = hmac(key, serializedData);
+
+		//Print out the mac of the serialized data
+		std::cout << "MAC of serialized data: ";
+		for (const auto &byte : macSerializedData)
+		{
+			std::cout << std::hex << (int)byte;
+		}
+		std::cout << std::endl << "Size of MAC:" << macSerializedData.size() << std::endl;
 		// Create a new variable with the size of the data
 		bytes dataWithSize(sizeof(dataSize));
 		memcpy(dataWithSize.data(), &dataSize, sizeof(dataSize));
 		// Append the serialized data to variable crafted above
 		dataWithSize.insert(dataWithSize.end(), serializedData.begin(), serializedData.end());
+		
 		// Return the data to the ORAM
 		put(block, dataWithSize);
 	}
 
 	vector<vector<int64_t>> ORAM::getContainer(const number block)
 	{
+		std::cout << "Getting container for block: " << block << std::endl;
 		bytes blockData;
 		get(block, blockData);
 
@@ -220,6 +283,7 @@ namespace CloakQueryPathORAM
 
 	void ORAM::readPath(const number leaf, unordered_set<number> &path, const bool putInStash)
 	{
+		std::cout << "Reading path for leaf: " << leaf << std::endl;
 		// for levels from root to leaf
 		for (number level = 0; level < height; level++)
 		{
@@ -232,6 +296,11 @@ namespace CloakQueryPathORAM
 		{
 			vector<block> blocks;
 			getCache(path, blocks, false);
+			// print blocks
+			for (const auto &block : blocks)
+			{
+				std::cout << "Block ID::::::: " << block.first << ", Data Size: " << block.second.size() << std::endl;
+			}
 
 			for (auto &&[id, data] : blocks)
 			{
@@ -241,11 +310,23 @@ namespace CloakQueryPathORAM
 					stash->add(id, data);
 				}
 			}
+
+			// Verify the integrity of each bucket in the path
+			for (const auto &bucketId : path)
+			{
+				std::cout << "Verifying bucket integrity for ID: " << bucketId << std::endl;
+				const auto &bucketData = cache[bucketId]; // Retrieve the bucket from the cache
+				if (!verifyBucketMAC(bucketData))
+				{
+					throw Exception("Bucket integrity check failed during readPath for bucket ID: " + std::to_string(bucketId));
+				}
+			}
 		}
 	}
 
 	void ORAM::writePath(const number leaf)
 	{
+		std::cout << "Writing path for leaf: " << leaf << std::endl;
 		vector<block> currentStash;
 		stash->getAll(currentStash);
 
@@ -271,7 +352,7 @@ namespace CloakQueryPathORAM
 					toDeleteLocal.push_back(i);
 
 					// look up to Z
-					if (toInsert.size() == Z)
+					if (toInsert.size() == Z-1) // Only fill the first Z-1 blocks with data
 					{
 						break;
 					}
@@ -286,26 +367,39 @@ namespace CloakQueryPathORAM
 			}
 
 			const auto bucketId = bucketForLevelLeaf(level, leaf);
-			bucket bucket;
-			bucket.resize(Z);
+			bucket bucketData;
+			bucketData.resize(Z);
 
 			// write the bucket
-			for (number i = 0; i < Z; i++)
+			// Fill the first Z-1 blocks with data or dummy blocks
+			for (number i = 0; i < Z-1; i++)
 			{
 				// auto block = bucket * Z + i;
 				if (toInsert.size() != 0)
 				{
-					bucket[i] = toInsert.back();
+					bucketData[i] = toInsert.back();
 					toInsert.pop_back();
 				}
 				else
 				{
 					// if nothing to insert, insert dummy (for security)
-					bucket[i] = {ULONG_MAX, getRandomBlock(dataSize)};
+					bucketData[i] = {ULONG_MAX, getRandomBlock(dataSize)};
 				}
 			}
 
-			requests.push_back({bucketId, bucket});
+			// // Compute and store the hash for the bucket
+			if (!isInitializing) {
+				computeAndStoreBucketMAC(bucketData);	
+			}
+			
+
+			// Verify the integrity of the bucket before writing it back
+			if (!verifyBucketMAC(bucketData))
+			{
+				throw Exception("Bucket integrity check failed during writePath for bucket ID: " + std::to_string(bucketId));
+			}
+
+			requests.push_back({bucketId, bucketData});
 		}
 
 		setCache(requests);
@@ -315,6 +409,42 @@ namespace CloakQueryPathORAM
 		{
 			stash->deleteBlock(removed);
 		}
+	}
+
+	void ORAM::computeAndStoreAllBucketMACs()
+	{
+		std::cout << "Computing and storing MACs for all buckets..." << std::endl;
+		std::cout << "Number of buckets: " << buckets << std::endl;
+		// Iterate through all the buckets in the ORAM
+		for (number bucketID = 0; bucketID < buckets; ++bucketID)
+		{
+			unordered_set<number> bucketLocation = {bucketID};
+			vector<block> bucketBlocks;
+			std::cout << "Entered the for loop..." << std::endl;
+
+			getCache(bucketLocation, bucketBlocks, false);
+			// print bucketBlocks
+			for (const auto &block : bucketBlocks)
+			{
+				std::cout << "Block ID: " << block.first << ", Data Size: " << block.second.size() << std::endl;
+			}
+
+			// Compute the MAC for the current bucket
+			//if (!isInitializing)
+			//{
+				computeAndStoreBucketMAC(bucketBlocks);
+			//}
+			// print size of bucketBlocks after computing MAC
+			for (const auto &block : bucketBlocks)
+			{
+				std::cout << "Block ID22222222: " << block.first << ", Data Size222222222: " << block.second.size() << std::endl;
+			}
+			// Update the bucket in the cache
+			setCache({{bucketID, bucketBlocks}});
+		}
+
+		syncCache();
+		isInitializing = false;
 	}
 
 	number ORAM::bucketForLevelLeaf(const number level, const number leaf) const
@@ -369,6 +499,11 @@ namespace CloakQueryPathORAM
 				bucket.push_back(downloaded[i]);
 				if (i % Z == Z - 1)
 				{
+					// Verify the integrity of the bucket before writing it back
+					if (!verifyBucketMAC(bucket))
+					{
+						throw Exception("Bucket integrity check failed during getCache for bucket ID: " + std::to_string(toGet[i / Z]));
+					}
 					cache[toGet[i / Z]] = bucket;
 					bucket.clear();
 				}
@@ -378,8 +513,11 @@ namespace CloakQueryPathORAM
 
 	void ORAM::setCache(const vector<pair<number, bucket>> &requests)
 	{
+		// std::cout << "Setting cache..." << std::endl;
 		for (auto &&request : requests)
 		{
+			// Print the size of the data being set in the cache
+			std::cout << "Setting cache for block ID: " << request.first << ", Data Size: " << request.second.size() << std::endl;
 			cache[request.first] = request.second;
 		}
 	}
@@ -389,5 +527,150 @@ namespace CloakQueryPathORAM
 		storage->set(boost::make_iterator_range(cache.begin(), cache.end()));
 
 		cache.clear();
+	}
+
+	void ORAM::computeAndStoreBucketMAC(bucket &bucketData)
+	{
+		bytes concatenatedData;
+		std::cout << "Computing MAC for bucket..." << std::endl;
+		// Compute the MAC for each block in the bucket
+		for (size_t i = 0; i < Z-1; i++)
+		{
+			if (bucketData[i].first != ULONG_MAX)
+			{
+				concatenatedData.insert(concatenatedData.end(), bucketData[i].second.begin(), bucketData[i].second.end());
+			}
+		}
+
+		// Compute MAC using the stored key 
+		bytes hash = hmac(key, concatenatedData);
+		
+		hash.resize(dataSize, 0x00); // Resize to match the block size
+		// Add the hash as a special block in the bucket
+		//updatedBucket = bucketData; // Copy the original bucket
+		//updatedBucket.push_back({ULONG_MAX, hash}); // Use ULONG_MAX as the block ID for the hash
+		bucketData[Z-1].first = ULONG_MAX; // Use ULONG_MAX as the block ID for the hash
+		bucketData[Z-1].second = hash; 
+		std::cout << "Block hash size for bucket: " << bucketData[Z-1].second.size() << std::endl;
+	}
+
+	bytes loadKeyFromFile(const std::string &filename)
+	{
+		if (!std::filesystem::exists(filename))
+		{
+			throw std::runtime_error("Key file does not exist: " + filename);
+		}
+		// Read the key from the file
+		std::ifstream file(filename, std::ios::binary);
+		bytes key(KEYSIZE);
+		file.read(reinterpret_cast<char *>(key.data()), KEYSIZE);
+		file.close();
+		return key;
+	}
+
+	void saveKeyToFile (const bytes &key, const std::string &filename)
+	{
+		std::string keyDir = "../key";
+		if (!std::filesystem::exists(keyDir))
+		{
+			std::filesystem::create_directory(keyDir);
+		}
+		std::string keyPath = keyDir + "/key.bin";
+		std::ofstream file(keyPath, std::ios::binary);
+		if (!file)
+		{
+			throw std::runtime_error("Error opening file for generated key to path: " + keyPath);
+		}
+		file.write(reinterpret_cast<const char *>(key.data()), key.size());
+		file.close();
+	}
+	
+	bytes ORAM::generateKey() const
+	{
+		std::cout << "Generating key..." << std::endl;
+		if (std::filesystem::exists("../key/key.bin"))
+		{
+			return loadKeyFromFile("../key/key.bin"); // Load the key from a file if it exists
+		}
+
+		bytes key(KEYSIZE, 0);
+		for (size_t i = 0; i < KEYSIZE; ++i)
+		{
+			key[i] = static_cast<uchar>(rand() % 256); // Generate a random byte
+		}
+		saveKeyToFile(key, "../key/key.bin"); // Save the key to a file
+		return key;
+	}
+
+	// Getter for the key
+	const bytes& ORAM::getKey() const
+	{
+		return key;
+	}
+
+	bool ORAM::verifyBucketMAC(const bucket &bucketData) const
+	{
+		// During intitlization the verification should be skipped
+		if (isInitializing)	{
+			std::cout << "Ignore verification during initilaization " << std::endl;
+			return true; 
+		}
+
+		if (bucketData.size() != Z)
+		{
+			throw Exception("Bucket size mismatch: expected " + std::to_string(Z) + ", got " + std::to_string(bucketData.size()));
+		}
+		// if (bucketData[Z-1].first != ULONG_MAX)
+		// {
+		// 	throw Exception("Bucket integrity check failed: MAC not found");
+		// }
+		// Extract the MAC from the last block of the bucket
+		const auto &lastBlock = bucketData[Z-1];
+		const auto &secondLastBlockID = bucketData[Z-2];
+		std::cout << "last block second size: " << lastBlock.second.size() << std::endl;
+		std::cout << "first block ID: " << bucketData[0].first << std::endl;
+		std::cout << "second last block second size: " << secondLastBlockID.second.size() << std::endl;
+		std::cout << "second last block ID: " << secondLastBlockID.first << std::endl;
+		//bytes storedMAC = lastBlock.second;
+		bytes storedMAC(lastBlock.second.begin(), lastBlock.second.begin() + 32);
+
+		// Concatenate the data from the other blocks in the bucket
+		bytes concatenatedData;
+		for (size_t i = 0; i < Z-1; i++)
+		{
+			if (bucketData[i].first != ULONG_MAX)
+			{
+				// Concatenate the data from the blocks
+				concatenatedData.insert(concatenatedData.end(), bucketData[i].second.begin(), bucketData[i].second.end());
+			}
+		}
+		// Compute the MAC for the concatenated data using the stored key
+		bytes computedMAC = hmac(key, concatenatedData);
+		// Print the key that is used
+//		std::cout << "Key used for MAC: ";
+		// for (const auto &byte : key)
+		// {
+		// 	std::cout << std::hex << static_cast<int>(byte);
+		// }
+		std::cout << "Stored MAC: " << storedMAC.size() << std::endl;
+		// Print Stored MAC
+		for (const auto &byte : storedMAC)
+		{
+			std::cout << std::hex << static_cast<int>(byte);
+		}
+		std::cout << std::endl;
+		std::cout << "Computed MAC: " << computedMAC.size() << std::endl;
+		// Print Computed MAC
+		for (const auto &byte : computedMAC)
+		{
+			std::cout << std::hex << static_cast<int>(byte);
+		}
+		std::cout << std::endl;
+		if (computedMAC != storedMAC)
+		{
+			throw Exception("Bucket integrity check failed: MAC mismatch");
+			return false; // Integrity check failed
+		}
+		else return true; // Integrity check passed
 	}
 }

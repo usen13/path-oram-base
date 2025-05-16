@@ -10,7 +10,7 @@ BDIR=bin
 
 CXXFLAGS= -I/usr/include/gtest -I/usr/include/gtest -I/usr/include -pthread
 
-LDFLAGS=-L $(LDIR) -L /usr/include/openssl -lgtest -lgtest_main -pthread -lsodium
+LDFLAGS=-L $(LDIR) -L /usr/include/openssl -lgtest -lgtest_main -pthread -lsodium -g
 
 LDLIBS=-l boost_system -l ssl -l crypto # libs for main code
 REDISLIBS=-l redis++ -l hiredis # libs for redis support
@@ -36,7 +36,7 @@ LIBNAME=pathoram
 # $(IDIR)/CLASS.hpp, a code in $(SDIR)/CLASS.cpp and a test in $(TDIR)/test-CLASS.cpp,
 # then the rest will magically work - it will compile each class and test and will run the tests.
 # CLASS does not even have to be a class in C++.
-ENTITIES = storage-adapter position-map-adapter utility oram stash-adapter trusted_proxy_layer
+ENTITIES = storage-adapter position-map-adapter utility oram stash-adapter
 
 # dependencies - definitions plus header files
 _DEPS = definitions.h $(addsuffix .hpp, $(ENTITIES))
@@ -66,7 +66,7 @@ all: shared docs
 binaries: $(TESTBIN) $(INTEGRATIONBIN) $(BENCHMARKSBIN)
 cleandebug: clean debug
 
-debug: CPPFLAGS += -g -DTESTING
+debug: CPPFLAGS += -g -DTESTING	-fdebug-prefix-map=$(PWD)=.
 debug: binaries
 
 profile: CPPFLAGS += -fprofile-arcs -ftest-coverage -fPIC -O0
@@ -95,7 +95,7 @@ run-test-sss: $(TESTSSS)
 clean-test-sss:
 	$(RM) $(TESTSSS)
 
-debug-test-sss: CPPFLAGS += -g -DTESTING
+debug-test-sss: CPPFLAGS += -g -DTESTING	-fdebug-prefix-map=$(PWD)=.
 debug-test-sss: $(TESTSSS)
 
 shared-debug: CPPFLAGS += -g -DDEBUG

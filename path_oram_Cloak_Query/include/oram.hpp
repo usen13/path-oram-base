@@ -37,6 +37,10 @@ namespace CloakQueryPathORAM
 		const number blocks;  // total number of blocks
 
 		const number batchSize; // a max number of requests to process at a time (default 1)
+		bool isInitializing; // Flag to indicate if the ORAM is being initialized
+
+		static bytes key; // key used for HMAC generation
+		static bool isKeyGenerated; // Flag to indicate if the key has been generated
 
 		// a layer between (expensive) storage and the protocol;
 		// holds items (buckets of blocks) in memory and unencrypted;
@@ -257,5 +261,41 @@ namespace CloakQueryPathORAM
 		 * @return the secret shared data
 		 */
 		vector<vector<int64_t>> getContainer(const number block);
+
+		/**
+		 * @brief Calculate the MAC for each bucket during ORAM initialization
+		 */
+		void computeAndStoreAllBucketMACs();
+
+		/**
+		 * @brief Compute and store the MAC for each bucket
+		 *
+		 * @param bucketData the blocks contained within the bucket
+		 * @param key the key used for MAC generation
+		 * @param updatedBucket the bucket updated with MACs based on current blocks
+		 */
+		void computeAndStoreBucketMAC(bucket &bucketData);
+
+		/**
+		 * @brief Generate a random key for digest creation
+		 *
+		 * @return bytes of the generated key
+		 */
+		bytes generateKey() const;
+
+		/**
+		 * @brief Get the key used for digest creation
+		 * 
+		 * @return bytes of the key
+		 */
+		const bytes &getKey() const;
+
+		/**
+		 * @brief Get the bucket data and check for integrity
+		 * 
+		 * @param bucketData the blocks contained within the bucket
+		 * @return bytes of the key
+		 */
+		bool verifyBucketMAC(const bucket &bucketData) const;
 	};
 }

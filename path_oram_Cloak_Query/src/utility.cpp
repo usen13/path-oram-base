@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iomanip>
 #include <openssl/aes.h>
+#include <openssl/hmac.h>
 #include <openssl/evp.h>
 #include <openssl/modes.h>
 #include <openssl/rand.h>
@@ -254,5 +255,29 @@ namespace CloakQueryPathORAM
 		copy(digest.begin(), digest.begin() + sizeof(number), ucharMaterial);
 
 		return material[0] % max;
+	}
+
+	bytes hmac(const bytes &key, const bytes &input)
+	{
+		// https: //wiki.openssl.org/index.php/HMAC
+
+		uchar message[input.size()];
+		copy(input.begin(), input.end(), message);
+
+		uchar *digest = (unsigned char *)OPENSSL_malloc(EVP_MAX_MD_SIZE);
+		unsigned int digestLength;
+
+		HMAC_CTX *context;
+		HANDLE_ERROR((context = HMAC_CTX_new()) != nullptr);
+		HANDLE_ERROR(HMAC_Init_ex(context, key.data(), key.size(), HASH_ALGORITHM(), nullptr));
+		HANDLE_ERROR(HMAC_Update(context, message, input.size()));
+		HANDLE_ERROR(HMAC_Final(context, digest, &digestLength));
+
+		bytes output(digest, digest + digestLength);
+
+		HMAC_CTX_free(context);
+		free(digest);
+
+		return output;
 	}
 }
