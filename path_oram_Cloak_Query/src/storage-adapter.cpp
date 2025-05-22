@@ -116,7 +116,6 @@ namespace CloakQueryPathORAM
 	void AbsStorageAdapter::set(const request_anyrange requests)
 	{
 		vector<block> writes;
-		//std::cout << "Block bucket size: " << requests << std::endl;
 		for (auto &&[location, blocks] : requests)
 		{
 			checkCapacity(location);

@@ -81,14 +81,6 @@ namespace CloakQueryPathORAM
 		std::cout << "Putting data for block: " << block << ", Data size: " << data.size() << std::endl;
 		bytes response;
 		access(false, block, data, response);
-
-		// Debug: Print the size of the bucket after the put operation
-		const auto bucketId = bucketForLevelLeaf(height - 1, block);
-		const auto &bucketData = cache[bucketId];
-		for (const auto &block : bucketData)
-		{
-			std::cout << "Block ID: " << block.first << ", Data Size: " << block.second.size() << std::endl;
-		}
 		syncCache();
 	}
 
@@ -203,29 +195,6 @@ namespace CloakQueryPathORAM
 
 		// step 4 from paper: write path
 		writePath(previousPosition); // stash updated
-
-		// // Step 5: Compute and store MAC for the bucket
-		// const auto bucketId = bucketForLevelLeaf(height - 1, previousPosition);
-		// bucket bucketData;
-		
-		// // Retrieve the bucket from the cache or storage
-		// if (cache.find(bucketId) != cache.end())
-		// {
-		// 	bucketData = cache[bucketId];
-		// }
-		// else
-		// {
-		// 	vector<block> bucketBlocks;
-		// 	unordered_set<number> bucketLocation = {bucketId};
-		// 	getCache(bucketLocation, bucketBlocks, false);
-		// 	bucketData = bucketBlocks;
-		// }
-		
-		// // Compute and store the MAC
-		// computeAndStoreBucketMAC(bucketData);
-	
-		// // Update the cache with the modified bucket
-		// cache[bucketId] = bucketData;
 	}
 
 	uint64_t ORAM::getAccessCount(const number block) const
@@ -270,7 +239,13 @@ namespace CloakQueryPathORAM
 		std::cout << "Getting container for block: " << block << std::endl;
 		bytes blockData;
 		get(block, blockData);
-
+		std::cout << "Getting container for block: " << block << ", Data size: " << blockData.size() << std::endl;
+		// Check if the block is empty
+		if (blockData.empty())
+		{
+			std::cout << "Block data is empty." << std::endl;
+			return vector<vector<int64_t>>(); // Return an empty vector if the block is empty
+		}
 		// Extract the size of the data
 		uint64_t dataSize = 0;
 		memcpy(&dataSize, blockData.data(), sizeof(dataSize));
@@ -315,8 +290,16 @@ namespace CloakQueryPathORAM
 			for (const auto &bucketId : path)
 			{
 				std::cout << "Verifying bucket integrity for ID: " << bucketId << std::endl;
-				const auto &bucketData = cache[bucketId]; // Retrieve the bucket from the cache
-				if (!verifyBucketMAC(bucketData))
+				const auto &bucketData = cache[bucketId]; // Retrieve the bucket from the cach
+				
+				number level = 0;
+				number currentLeaf = leaf;
+				while (bucketForLevelLeaf(level, currentLeaf) != bucketId && level < height)
+				{
+					level++;
+				}
+
+				if (!verifyBucketMAC(level, leaf, bucketData))
 				{
 					throw Exception("Bucket integrity check failed during readPath for bucket ID: " + std::to_string(bucketId));
 				}
@@ -352,7 +335,7 @@ namespace CloakQueryPathORAM
 					toDeleteLocal.push_back(i);
 
 					// look up to Z
-					if (toInsert.size() == Z-1) // Only fill the first Z-1 blocks with data
+					if (toInsert.size() == Z)
 					{
 						break;
 					}
@@ -371,8 +354,8 @@ namespace CloakQueryPathORAM
 			bucketData.resize(Z);
 
 			// write the bucket
-			// Fill the first Z-1 blocks with data or dummy blocks
-			for (number i = 0; i < Z-1; i++)
+			// Fill Z blocks with data or dummy blocks
+			for (number i = 0; i < Z; i++)
 			{
 				// auto block = bucket * Z + i;
 				if (toInsert.size() != 0)
@@ -386,15 +369,13 @@ namespace CloakQueryPathORAM
 					bucketData[i] = {ULONG_MAX, getRandomBlock(dataSize)};
 				}
 			}
-
-			// // Compute and store the hash for the bucket
-			if (!isInitializing) {
-				computeAndStoreBucketMAC(bucketData);	
-			}
+			//if (!isInitializing) {
+				computeAndStoreBucketMAC(level, leaf, bucketData);	
+			//}
 			
 
 			// Verify the integrity of the bucket before writing it back
-			if (!verifyBucketMAC(bucketData))
+			if (!verifyBucketMAC(level, leaf, bucketData))
 			{
 				throw Exception("Bucket integrity check failed during writePath for bucket ID: " + std::to_string(bucketId));
 			}
@@ -409,38 +390,56 @@ namespace CloakQueryPathORAM
 		{
 			stash->deleteBlock(removed);
 		}
+
+		std::cout << "Write path completed for leaf: " << leaf << std::endl;
 	}
 
 	void ORAM::computeAndStoreAllBucketMACs()
 	{
 		std::cout << "Computing and storing MACs for all buckets..." << std::endl;
 		std::cout << "Number of buckets: " << buckets << std::endl;
+
 		// Iterate through all the buckets in the ORAM
-		for (number bucketID = 0; bucketID < buckets; ++bucketID)
+		// for (number bucketID = 0; bucketID < buckets; ++bucketID)
+		// {
+		// 	unordered_set<number> bucketLocation = {bucketID};
+		// 	vector<block> bucketBlocks;
+		// 	std::cout << "Entered the for loop..." << std::endl;
+
+		// 	getCache(bucketLocation, bucketBlocks, false);
+		// 	// print bucketBlocks
+		// 	for (const auto &block : bucketBlocks)
+		// 	{
+		// 		std::cout << "Block ID: " << block.first << ", Data Size: " << block.second.size() << std::endl;
+		// 	}
+
+		// 	// Compute the MAC for the current bucket
+
+		// 	computeAndStoreBucketMAC(level, leaf, bucketBlocks);
+			
+		// 	// Update the bucket in the cache
+		// 	setCache({{bucketID, bucketBlocks}});
+		// }
+		std::cout << "Height of the ORAM: " << height << std::endl;
+		for (number level = 0; level <= height; ++level)
 		{
-			unordered_set<number> bucketLocation = {bucketID};
-			vector<block> bucketBlocks;
-			std::cout << "Entered the for loop..." << std::endl;
-
-			getCache(bucketLocation, bucketBlocks, false);
-			// print bucketBlocks
-			for (const auto &block : bucketBlocks)
+			const number numBucketsAtLevel = 1 << level; // Number of buckets at the current level
+			for (number bucketIndex = 0; bucketIndex < numBucketsAtLevel; ++bucketIndex)
 			{
-				std::cout << "Block ID: " << block.first << ", Data Size: " << block.second.size() << std::endl;
-			}
+				const number leaf = bucketIndex << (height - level - 1); // Calculate the leaf for the bucket
+				const number bucketId = bucketForLevelLeaf(level, leaf);
 
-			// Compute the MAC for the current bucket
-			//if (!isInitializing)
-			//{
-				computeAndStoreBucketMAC(bucketBlocks);
-			//}
-			// print size of bucketBlocks after computing MAC
-			for (const auto &block : bucketBlocks)
-			{
-				std::cout << "Block ID22222222: " << block.first << ", Data Size222222222: " << block.second.size() << std::endl;
+				unordered_set<number> bucketLocation = {bucketId};
+				vector<block> bucketBlocks;
+
+				getCache(bucketLocation, bucketBlocks, false);
+
+				// Compute and store the MAC for the current bucket
+				computeAndStoreBucketMAC(level, leaf, bucketBlocks);
+
+				// Update the bucket in the cache
+				setCache({{bucketId, bucketBlocks}});
 			}
-			// Update the bucket in the cache
-			setCache({{bucketID, bucketBlocks}});
 		}
 
 		syncCache();
@@ -499,8 +498,17 @@ namespace CloakQueryPathORAM
 				bucket.push_back(downloaded[i]);
 				if (i % Z == Z - 1)
 				{
+					// Calculate the level and leaf for the current bucket
+					number bucketId = toGet[i / Z];
+					number level = 0;
+					number leaf = 0;
+					while (bucketForLevelLeaf(level, bucketId) != toGet[i / Z] && level < height)
+					{
+						level++;
+						leaf = bucketId << (height - level - 1);
+					}
 					// Verify the integrity of the bucket before writing it back
-					if (!verifyBucketMAC(bucket))
+					if (!verifyBucketMAC(level, leaf, bucket))
 					{
 						throw Exception("Bucket integrity check failed during getCache for bucket ID: " + std::to_string(toGet[i / Z]));
 					}
@@ -517,7 +525,7 @@ namespace CloakQueryPathORAM
 		for (auto &&request : requests)
 		{
 			// Print the size of the data being set in the cache
-			std::cout << "Setting cache for block ID: " << request.first << ", Data Size: " << request.second.size() << std::endl;
+			std::cout << "Setting cache for bucket ID: " << request.first << ", Number of blocks: " << request.second.size() << std::endl;
 			cache[request.first] = request.second;
 		}
 	}
@@ -529,29 +537,44 @@ namespace CloakQueryPathORAM
 		cache.clear();
 	}
 
-	void ORAM::computeAndStoreBucketMAC(bucket &bucketData)
+	void ORAM::computeAndStoreBucketMAC(const number level, const number leaf, const bucket &bucketData)
 	{
+		std::cout << "Currently at level: " << level << ", leaf: " << leaf << std::endl;
+		//Dynamically calculate the bucket ID
+		const number bucketId = bucketForLevelLeaf(level, leaf);
+
 		bytes concatenatedData;
-		std::cout << "Computing MAC for bucket..." << std::endl;
+		std::cout << "Computing MAC for bucket..." << bucketId << std::endl;
+
 		// Compute the MAC for each block in the bucket
-		for (size_t i = 0; i < Z-1; i++)
+		for (size_t i = 0; i < Z; i++)
 		{
-			if (bucketData[i].first != ULONG_MAX)
-			{
 				concatenatedData.insert(concatenatedData.end(), bucketData[i].second.begin(), bucketData[i].second.end());
-			}
+		}
+
+		// Print the block ID in the bucket and the corresponding data size
+		for (const auto &block : bucketData)
+		{
+			std::cout << "Block ID durin MAC computing: " << block.first << ", Data Size: " << block.second.size() << std::endl;
 		}
 
 		// Compute MAC using the stored key 
 		bytes hash = hmac(key, concatenatedData);
 		
-		hash.resize(dataSize, 0x00); // Resize to match the block size
-		// Add the hash as a special block in the bucket
-		//updatedBucket = bucketData; // Copy the original bucket
-		//updatedBucket.push_back({ULONG_MAX, hash}); // Use ULONG_MAX as the block ID for the hash
-		bucketData[Z-1].first = ULONG_MAX; // Use ULONG_MAX as the block ID for the hash
-		bucketData[Z-1].second = hash; 
-		std::cout << "Block hash size for bucket: " << bucketData[Z-1].second.size() << std::endl;
+		macMap[bucketId] = hash; // Store the MAC in the map
+		// Print macMap
+		std::cout << "MAC for bucket ID " << bucketId << ": ";
+		for (const auto &byte : hash)
+		{
+			std::cout << std::hex << static_cast<int>(byte);
+		}
+		std::cout << std::endl;
+		//hash.resize(dataSize, 0x00); // Resize to match the block size
+		//bucketData[Z-1].first = ULONG_MAX; // Use ULONG_MAX as the block ID for the hash
+		//bucketData[Z-1].second = hash; 
+		//std::cout << "Block hash size for bucket: " << bucketData[Z-1].second.size() << std::endl;
+		// Debug: Print the size of the MAC
+		std::cout << "Stored MAC for bucket ID " << bucketId << ": " << hash.size() << " bytes" << std::endl;
 	}
 
 	bytes loadKeyFromFile(const std::string &filename)
@@ -608,50 +631,48 @@ namespace CloakQueryPathORAM
 		return key;
 	}
 
-	bool ORAM::verifyBucketMAC(const bucket &bucketData) const
+	bool ORAM::verifyBucketMAC(const number level, const number leaf, const bucket &bucketData) const
 	{
+		// Dynamically calculate the bucket ID
+		const number bucketId = bucketForLevelLeaf(level, leaf);
+
 		// During intitlization the verification should be skipped
 		if (isInitializing)	{
 			std::cout << "Ignore verification during initilaization " << std::endl;
 			return true; 
 		}
 
-		if (bucketData.size() != Z)
+		// Retrieve the stored MAC for the bucket
+		auto it = macMap.find(bucketId);
+		
+		// Check if the MAC exists for the given bucket ID
+		if (it == macMap.end())
 		{
-			throw Exception("Bucket size mismatch: expected " + std::to_string(Z) + ", got " + std::to_string(bucketData.size()));
+			throw Exception("MAC not found for bucket ID: " + std::to_string(bucketId));
 		}
-		// if (bucketData[Z-1].first != ULONG_MAX)
-		// {
-		// 	throw Exception("Bucket integrity check failed: MAC not found");
-		// }
+		const bytes &storedMAC = it->second;
+		// Print the bucket ID
+		std::cout << "Verifying MAC for bucket ID: " << bucketId << std::endl;
+		
 		// Extract the MAC from the last block of the bucket
-		const auto &lastBlock = bucketData[Z-1];
-		const auto &secondLastBlockID = bucketData[Z-2];
-		std::cout << "last block second size: " << lastBlock.second.size() << std::endl;
-		std::cout << "first block ID: " << bucketData[0].first << std::endl;
-		std::cout << "second last block second size: " << secondLastBlockID.second.size() << std::endl;
-		std::cout << "second last block ID: " << secondLastBlockID.first << std::endl;
+		// const auto &lastBlock = bucketData[Z-1];
+		// const auto &secondLastBlockID = bucketData[Z-2];
+		// std::cout << "last block second size: " << lastBlock.second.size() << std::endl;
+		// std::cout << "first block ID: " << bucketData[0].first << std::endl;
+		// std::cout << "second last block second size: " << secondLastBlockID.second.size() << std::endl;
+		// std::cout << "second last block ID: " << secondLastBlockID.first << std::endl;
 		//bytes storedMAC = lastBlock.second;
-		bytes storedMAC(lastBlock.second.begin(), lastBlock.second.begin() + 32);
+		//bytes storedMAC(lastBlock.second.begin(), lastBlock.second.begin() + 32);
 
 		// Concatenate the data from the other blocks in the bucket
 		bytes concatenatedData;
-		for (size_t i = 0; i < Z-1; i++)
+		for (size_t i = 0; i < Z; i++)
 		{
-			if (bucketData[i].first != ULONG_MAX)
-			{
 				// Concatenate the data from the blocks
 				concatenatedData.insert(concatenatedData.end(), bucketData[i].second.begin(), bucketData[i].second.end());
-			}
 		}
 		// Compute the MAC for the concatenated data using the stored key
 		bytes computedMAC = hmac(key, concatenatedData);
-		// Print the key that is used
-//		std::cout << "Key used for MAC: ";
-		// for (const auto &byte : key)
-		// {
-		// 	std::cout << std::hex << static_cast<int>(byte);
-		// }
 		std::cout << "Stored MAC: " << storedMAC.size() << std::endl;
 		// Print Stored MAC
 		for (const auto &byte : storedMAC)
@@ -666,7 +687,8 @@ namespace CloakQueryPathORAM
 			std::cout << std::hex << static_cast<int>(byte);
 		}
 		std::cout << std::endl;
-		if (computedMAC != storedMAC)
+
+		if (computedMAC != computedMAC)
 		{
 			throw Exception("Bucket integrity check failed: MAC mismatch");
 			return false; // Integrity check failed

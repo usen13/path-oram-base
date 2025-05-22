@@ -131,14 +131,13 @@ namespace CloakQueryPathORAM
 			totalBlocks = (secretSharesSize / 1000) + 1; 
 			totalBuckets = (totalBlocks / Z) + 1;
 			
-
+			
 			//CAPACITY = totalBuckets * Z; 
 			// This is used to calculate the height of the ORAM tree. 
 			// For example, if CAPACITY = 32, then LOG_CAPACITY = 5
 			// Logarithm base 2 of the capacity
-			//LOG_CAPACITY = static_cast<number>(ceil(log2(CAPACITY))); 
-			LOG_CAPACITY = 1; 
-			CAPACITY = (1 << LOG_CAPACITY);; // Total number of buckets in the ORAM												
+			LOG_CAPACITY = static_cast<number>(ceil(log2(totalBuckets))); 
+			CAPACITY = (1 << LOG_CAPACITY);; // Total number of buckets in the ORAM
 
 			storage = make_shared<InMemoryStorageAdapter>(CAPACITY + Z, BLOCK_SIZE, bytes(), Z);
 			stash = make_shared<InMemoryStashAdapter>(3 * LOG_CAPACITY * Z);
@@ -157,7 +156,7 @@ namespace CloakQueryPathORAM
 		void populateStorage()
 		{
 			std::cout << "Populating storage with " << CAPACITY << " buckets..." << std::endl;
-			for (number i = 0; i < CAPACITY; i++)
+			for (number i = 0; i < (CAPACITY + Z); i++)
 			{
 				bucket bucket;
 				for (auto j = 0uLL; j < Z; j++)
@@ -175,33 +174,14 @@ namespace CloakQueryPathORAM
 		std::vector<std::vector<int64_t>> secretShares = loadSecretShares(1);
 
 		initialize(secretShares.size());
-		populateStorage();
+		populateStorage(); // Called to set block ID's within each bucket across the entire ORAM
+		
 		// Computer the MAC for the current buckets in storage
 		oram->computeAndStoreAllBucketMACs();
-		// Block ID to store the container
-		//number allBlocks = (((number)1 << LOG_CAPACITY) * Z);
 
 		// Print the size of secret shares before storing them
 		std::cout << "Size of secret shares: " << secretShares.size() << std::endl;
 
-		//int blockID = 1; // Block ID to store the container
-		// for (number i = 0; i < allBlocks; i++)
-		// {
-		// 	std::vector<std::vector<int64_t>> secretSharesPerBlock(secretShares.begin() + (i * 1000), 
-		// 		secretShares.begin() + std::min((i + 1) * 1000, (number)secretShares.size())); // Get the shares for the current block
-		// 	number blockID = i % CAPACITY; // Block ID to store the container
-		// 	std::cout << "Block ID: " << blockID << std::endl;
-
-		// 	// Serialize the secret shares into bytes
-		 	//bytes serializedData = serialize(secretShares);
-
-		// 	// Print the size of serialized data
-		// 	std::cout << "Size of serialized data: " << serializedData.size() << std::endl;
-
-		// 	// Put the container into ORAM
-		// 	ASSERT_NO_THROW(oram->put(blockID, serializedData));
-		// }
-		// Put the container into ORAM
 		number currentIndex = 0;
 		number blockID = 0;
 
@@ -222,22 +202,16 @@ namespace CloakQueryPathORAM
 
 		// Get the container back from ORAM
 		std::vector<std::vector<int64_t>> retrievedShares;
-		
-		//for (number i; i < totalBlocks; i++)
-		//{
-			//number blockID = i + 1; // Block ID to store the container
-			for (number i = 0; i < CAPACITY; i++)
+			for (number i = 0; i < blockID; i++)
 			{
 				std::cout << "retrievedShares for block ID: " << i << std::endl;
-				for (auto j = 0uLL; j < Z; j++)
-				{
 					//bucket.push_back({i * Z + j, bytes()});
-					ASSERT_NO_THROW(retrievedShares = oram->getContainer(i * Z + j));
-				}
-				//storage->set(i, bucket);
+					std::vector<std::vector<int64_t>> blockShares;
+					ASSERT_NO_THROW(blockShares = oram->getContainer(i));
+					
+					// Appending the retrieved shares to the retrievedShares vector
+					retrievedShares.insert(retrievedShares.end(), blockShares.begin(), blockShares.end());
 			}
-			//ASSERT_NO_THROW(retrievedShares = oram->getContainer(1));
-		//}
 
 		// Verify that the retrieved shares match the original shares
 		ASSERT_EQ(secretShares.size(), retrievedShares.size());
