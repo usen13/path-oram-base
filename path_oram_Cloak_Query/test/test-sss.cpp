@@ -175,7 +175,7 @@ namespace CloakQueryPathORAM
 
 		initialize(secretShares.size());
 		populateStorage(); // Called to set block ID's within each bucket across the entire ORAM
-		
+
 		// Computer the MAC for the current buckets in storage
 		oram->computeAndStoreAllBucketMACs();
 
@@ -205,7 +205,6 @@ namespace CloakQueryPathORAM
 			for (number i = 0; i < blockID; i++)
 			{
 				std::cout << "retrievedShares for block ID: " << i << std::endl;
-					//bucket.push_back({i * Z + j, bytes()});
 					std::vector<std::vector<int64_t>> blockShares;
 					ASSERT_NO_THROW(blockShares = oram->getContainer(i));
 					
@@ -225,68 +224,97 @@ namespace CloakQueryPathORAM
 		}
 	}
 
-	// TEST_F(ORAMTest, PutGetContainerMultipleORAMs)
-	// {
-	// 	// Load secret shares
-	// 	std::vector<std::vector<std::vector<int64_t>>> secretShares;
-	// 	for (int i = 1; i <= 6; i++) 
-	// 	{ 
-	// 		secretShares.push_back(loadSecretShares(i));
-	// 	}
-	// 	// Print out integer value in secretSHares[0]
-	// 	// for (size_t i = 0; i < secretShares[0][0].size(); ++i)
-	// 	// {
-	// 	// 	//for (size_t j = 0; j < secretShares[0][i].size(); ++j)
-	// 	// 	//{
-	// 	// 		std::cout << secretShares[0][0][i] << " ";
-	// 	// 	//}
-	// 	// 	std::cout << std::endl;
-	// 	// }
-	// 	//std::cout << "Size of secret shares: " << secretShares.size() << std::endl;
-	// 	std::vector<std::unique_ptr<ORAM>> oramInstances;
+	TEST_F(ORAMTest, PutGetContainerMultipleORAMs)
+	{
+		// Load secret shares
+		std::vector<std::vector<std::vector<int64_t>>> secretShares;
+		for (int i = 1; i <= 6; i++) 
+		{ 
+			secretShares.push_back(loadSecretShares(i));
+		}
+		// Print out integer value in secretSHares[0]
+		// for (size_t i = 0; i < secretShares[0][0].size(); ++i)
+		// {
+		// 	//for (size_t j = 0; j < secretShares[0][i].size(); ++j)
+		// 	//{
+		// 		std::cout << secretShares[0][0][i] << " ";
+		// 	//}
+		// 	std::cout << std::endl;
+		// }
+		//std::cout << "Size of secret shares: " << secretShares.size() << std::endl;
+		std::vector<std::unique_ptr<ORAM>> oramInstances;
 
-	// 	for (size_t serverIndex = 0; serverIndex < secretShares.size(); serverIndex++)
-	// 	{
-	// 		// Initialize ORAM for each server
-	// 		initialize(secretShares[serverIndex].size());
+		for (size_t serverIndex = 0; serverIndex < secretShares.size(); serverIndex++)
+		{
+			// Initialize ORAM for each server
+			initialize(secretShares[serverIndex].size());
 
-	// 		// Print out the size of secret shares for each server
-	// 		//std::cout << "Size of secret shares for server " << serverIndex + 1 << ": " << secretShares[serverIndex].size() << std::endl;
-	// 		oramInstances.push_back(std::move(oram));
-	// 	}
+			// Print out the size of secret shares for each server
+			//std::cout << "Size of secret shares for server " << serverIndex + 1 << ": " << secretShares[serverIndex].size() << std::endl;
+			oramInstances.push_back(std::move(oram));
+		}
 
-	// 	// Retrieve and verify the secret shares from each ORAM
-	// 	for (size_t serverIndex = 0; serverIndex < secretShares.size(); ++serverIndex)
-	// 	{
-	// 		// Block ID to store the container
-	// 		for (size_t i = 0; i < totalBlocks; i++)
-	// 		{
-	// 			number blockID = i + 1; // Block ID to store the container
-	// 			ASSERT_NO_THROW(oramInstances[serverIndex]->putContainer(blockID, secretShares[serverIndex]));
-			
-	// 		//number blockID = 1;
+		number currentIndex = 0;
+		number blockID = 0;
 
-	// 			// Get the container back from the respective ORAM
-	// 			std::vector<std::vector<int64_t>> retrievedShares;
-	// 			ASSERT_NO_THROW(retrievedShares = oramInstances[serverIndex]->getContainer(blockID));
+		// Retrieve and verify the secret shares from each ORAM
+		for (size_t serverIndex = 0; serverIndex < secretShares.size(); ++serverIndex)
+		{
+			std::cout << "Entered the for loop for putting and retrieveing data: " << serverIndex << std::endl;
+			// Block ID to store the container
+			for (size_t i = 0; i < totalBlocks; i++)
+			{
+				while (currentIndex < secretShares[serverIndex].size())
+				{
+					// Get the next chunk of secret shares to store in the ORAM
+					std::vector<std::vector<int64_t>> secretSharesPerBlock(
+						secretShares[serverIndex].begin() + currentIndex,
+						secretShares[serverIndex].begin() + std::min(currentIndex + 1000, (number)secretShares[serverIndex].size()));
 
-	// 			// Verify that the retrieved shares match the original shares
-	// 			//std::cout << "Size of secret shares: " << secretShares[0][0].size() << std::endl;
-	// 			ASSERT_EQ(retrievedShares.size(), 6);
-	// 			ASSERT_EQ(secretShares[0][0].size(), retrievedShares[0].size());
-	// 			for (size_t j = 0; j < secretShares[serverIndex].size(); ++j)
-	// 			{
-	// 				ASSERT_EQ(secretShares[serverIndex][j], retrievedShares[j]);
-	// 				// Print out the data in retrievedShares
-	// 				// for (const auto& vec: retrievedShares[j])
-	// 				// {
-	// 				// 	std::cout << vec << " ";
-	// 				// }
-	// 				// std::cout << std::endl;
-	// 			}
-	// 		}
-	// 	}
-	// }
+					// Store the chunk in the ORAM
+					ASSERT_NO_THROW(oramInstances[serverIndex]->putContainer(blockID, secretSharesPerBlock));
+
+					// Update the current index and block ID
+					currentIndex += 1000;
+					blockID++;
+				}
+				//ASSERT_NO_THROW(oramInstances[serverIndex]->putContainer(blockID, secretShares[serverIndex]));
+				// Reset thec current index for the next server
+				currentIndex = 0;
+
+				// Get the container back from the respective ORAM
+				std::vector<std::vector<int64_t>> retrievedShares;
+				for (number i = 0; i < blockID; i++)
+				{
+					std::cout << "retrievedShares for block ID: " << i << std::endl;
+						std::vector<std::vector<int64_t>> blockShares;
+						ASSERT_NO_THROW(blockShares = oramInstances[serverIndex]->getContainer(i));
+						
+						// Appending the retrieved shares to the retrievedShares vector
+						retrievedShares.insert(retrievedShares.end(), blockShares.begin(), blockShares.end());
+				}
+			//	ASSERT_NO_THROW(retrievedShares = oramInstances[serverIndex]->getContainer(blockID));
+
+				// Verify that the retrieved shares match the original shares
+				//std::cout << "Size of secret shares: " << secretShares[0][0].size() << std::endl;
+				ASSERT_EQ(retrievedShares.size(), secretShares[serverIndex].size());
+				ASSERT_EQ(secretShares[0][0].size(), retrievedShares[0].size());
+				for (size_t j = 0; j < secretShares[serverIndex].size(); ++j)
+				{
+					ASSERT_EQ(secretShares[serverIndex][j], retrievedShares[j]);
+					// Print out the data in retrievedShares
+					// for (const auto& vec: retrievedShares[j])
+					// {
+					// 	std::cout << vec << " ";
+					// }
+					// std::cout << std::endl;
+				}
+
+				// Reset the block ID for the next server
+				blockID = 0;
+			}
+		}
+	}
 }
 
 
