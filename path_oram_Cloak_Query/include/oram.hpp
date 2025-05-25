@@ -301,5 +301,15 @@ namespace CloakQueryPathORAM
 		 * @return bytes of the key
 		 */
 		bool verifyBucketMAC(const number level, const number leaf, const bucket &bucketData) const;
+
+		/**
+		 * @brief Save the MAC map to a file
+		 */
+		void saveMacMap(const std::string &filename) const;
+
+		/**
+		 * @brief Load the MAC map from a file
+		 */
+		void loadMacMap(const std::string &filename);
 	};
 }

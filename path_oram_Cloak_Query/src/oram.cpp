@@ -4,6 +4,7 @@
 
 #include <boost/format.hpp>
 #include <filesystem>
+#include <fstream>
 
 namespace CloakQueryPathORAM
 {
@@ -653,16 +654,6 @@ namespace CloakQueryPathORAM
 		const bytes &storedMAC = it->second;
 		// Print the bucket ID
 		std::cout << "Verifying MAC for bucket ID: " << bucketId << std::endl;
-		
-		// Extract the MAC from the last block of the bucket
-		// const auto &lastBlock = bucketData[Z-1];
-		// const auto &secondLastBlockID = bucketData[Z-2];
-		// std::cout << "last block second size: " << lastBlock.second.size() << std::endl;
-		// std::cout << "first block ID: " << bucketData[0].first << std::endl;
-		// std::cout << "second last block second size: " << secondLastBlockID.second.size() << std::endl;
-		// std::cout << "second last block ID: " << secondLastBlockID.first << std::endl;
-		//bytes storedMAC = lastBlock.second;
-		//bytes storedMAC(lastBlock.second.begin(), lastBlock.second.begin() + 32);
 
 		// Concatenate the data from the other blocks in the bucket
 		bytes concatenatedData;
@@ -694,5 +685,34 @@ namespace CloakQueryPathORAM
 			return false; // Integrity check failed
 		}
 		else return true; // Integrity check passed
+	}
+
+	void ORAM::saveMacMap(const std::string &filename) const
+	{
+		std::ofstream ofs(filename, std::ios::binary | std::ios::trunc);
+		uint64_t count = macMap.size();
+		ofs.write(reinterpret_cast<const char*>(&count), sizeof(count));
+		for (const auto &pair : macMap) {
+			ofs.write(reinterpret_cast<const char*>(&pair.first), sizeof(pair.first));
+			uint64_t size = pair.second.size();
+			ofs.write(reinterpret_cast<const char*>(&size), sizeof(size));
+			ofs.write(reinterpret_cast<const char*>(pair.second.data()), size);
+		}
+	}
+
+	void ORAM::loadMacMap(const std::string &filename)
+	{
+		std::ifstream ifs(filename, std::ios::binary);
+		uint64_t count;
+		ifs.read(reinterpret_cast<char*>(&count), sizeof(count));
+		for (uint64_t i = 0; i < count; ++i) {
+			number key;
+			ifs.read(reinterpret_cast<char*>(&key), sizeof(key));
+			uint64_t size;
+			ifs.read(reinterpret_cast<char*>(&size), sizeof(size));
+			bytes value(size);
+			ifs.read(reinterpret_cast<char*>(value.data()), size);
+			macMap[key] = value;
+		}
 	}
 }

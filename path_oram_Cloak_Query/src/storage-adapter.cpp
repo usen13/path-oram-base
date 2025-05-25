@@ -286,23 +286,8 @@ namespace CloakQueryPathORAM
 			}
 			std::cout << "Number of blocks per bucket: " << bucketData.size() << std::endl;
 
-			// bytes concatenatedData;
-			// // Compute and store the MAC in the last block of the bucket
-			// for (size_t j = 0; j < Z - 1; j++)
-			// {
-			// 	concatenatedData.insert(concatenatedData.end(), bucketData[j].second.begin(), bucketData[j].second.end());
-			// }
-			// bytes mac = hmac(key, concatenatedData);
-
-			// bucketData[Z - 1].first = ULONG_MAX;
-			// bucketData[Z - 1].second = mac; // Use ULONG_MAX as the block ID for the hash
-
 			 requests.push_back({i, bucketData});
 		}
-		// for (const auto &request : requests)
-		// {
-    	// 	std::cout << "Request location: " << request.first << ", Bucket size: " << request.second.size() << std::endl;
-		// }
 		std::cout << "Total requests: " << requests.size() << std::endl;
 		std::cout << "Total capacity: " << capacity << std::endl;
 		std::cout << "Total block size: " << blockSize << std::endl;
