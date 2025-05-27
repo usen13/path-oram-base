@@ -179,7 +179,11 @@ namespace CloakQueryPathORAM
 		std::cout << "Accessing and remapping block: " << block << std::endl;
 		// step 1 from paper: remap block
 		const auto previousPosition = map->get(block);
+		auto start = std::chrono::high_resolution_clock::now();
 		map->set(block, getRandomULong(1 << (height - 1)));
+		auto end = std::chrono::high_resolution_clock::now();
+		auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+		std::cout << "Remapping took: " << duration.count() << " microseconds" << std::endl;
 		// Increment the access count for that block
 		accessCount[block]++;
 

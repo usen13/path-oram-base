@@ -152,6 +152,7 @@ docs: clean-docs
 
 clean: clean-docs clean-binaries
 	$(RM) $(ODIR)/* *~ *.dSYM *.gcov *.gcda *.gcno *.bin coverage-html junit-*.xml cobertura.xml
+	$(RM) ../backup
 
 clean-docs:
 	$(RM) ../docs
