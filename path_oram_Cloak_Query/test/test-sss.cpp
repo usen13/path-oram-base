@@ -52,6 +52,36 @@ std::vector<std::vector<int64_t>> loadSecretShares(int serverNumber) {
 	return allShares;
 }
 
+// Overloaded function to load secret shares from the first file found in the ../shares directory
+std::vector<std::vector<int64_t>> loadSecretShares() {
+    std::string baseDir = "../shares";
+    for (const auto& entry : std::filesystem::directory_iterator(baseDir)) {
+        if (entry.is_regular_file()) {
+            std::ifstream file(entry.path(), std::ios::in);
+            std::vector<std::vector<int64_t>> allShares;
+            if (file.is_open()) {
+                std::string line;
+                while (std::getline(file, line)) {
+                    std::istringstream iss(line);
+                    std::string y_str;
+                    std::vector<int64_t> tupleShares;
+                    while (std::getline(iss, y_str, '|')) {
+                        y_str.erase(0, y_str.find_first_not_of(" \t\n\r"));
+                        y_str.erase(y_str.find_last_not_of(" \t\n\r") + 1);
+                        if (!y_str.empty()) {
+                            tupleShares.push_back(std::stoll(y_str));
+                        }
+                    }
+                    allShares.push_back(tupleShares);
+                }
+                file.close();
+            }
+            return allShares; // Return after first file
+        }
+    }
+    throw std::runtime_error("No share file found in ../shares");
+}
+
 namespace CloakQueryPathORAM
 {
     class MockStorage : public AbsStorageAdapter
@@ -151,7 +181,7 @@ namespace CloakQueryPathORAM
 			LOG_CAPACITY = static_cast<number>(ceil(log2(totalBuckets))); 
 			CAPACITY = (1 << LOG_CAPACITY);; // Total number of buckets in the ORAM
 
-			// Use the same backupDir as disaster()
+			// Use the same backupDir as backupGenerator()
 			std::string backupDir = "../backup";
 			if (!std::filesystem::exists(backupDir)) {
 				std::filesystem::create_directory(backupDir);
@@ -204,8 +234,8 @@ namespace CloakQueryPathORAM
 			}
 		}
 
-		// Change disaster to take explicit arguments
-		void disaster(
+		// Change backupGenerator to take explicit arguments
+		void backupGenerator(
 	const std::shared_ptr<AbsStorageAdapter>& storage,
 	const std::shared_ptr<AbsPositionMapAdapter>& map,
 	const std::shared_ptr<AbsStashAdapter>& stash,
@@ -290,7 +320,7 @@ namespace CloakQueryPathORAM
 	// 			ASSERT_EQ(secretShares[i][j], retrievedShares[i][j]);
 	// 		}
 	// 	}
-	// 	disaster(storage, map, stash, oram, 0);
+	// 	backupGenerator(storage, map, stash, oram, 0);
 	// }
 
 	// TEST_F(ORAMTest, PutGetContainerMultipleORAMs)
@@ -327,7 +357,7 @@ namespace CloakQueryPathORAM
 	// 		maps.push_back(map);
 	// 		stashes.push_back(stash);
 
-	// 		//disaster(storage, map, stash, oramInstances.back(), serverIndex); // Save state for this server
+	// 		//backupGenerator(storage, map, stash, oramInstances.back(), serverIndex); // Save state for this server
 	// 	}
 
 	// 	number currentIndex = 0;
@@ -390,64 +420,121 @@ namespace CloakQueryPathORAM
 	// 			blockID = 0;
 	// 		}
 	// 		// Save the state for this server
-	// 		disaster(storages[serverIndex], maps[serverIndex], stashes[serverIndex], oramInstances[serverIndex], serverIndex);
+	// 		backupGenerator(storages[serverIndex], maps[serverIndex], stashes[serverIndex], oramInstances[serverIndex], serverIndex);
 	// 	}
 	// }
 
-	TEST_F(ORAMTest, PutContainerMultipleORAMs)
-	{
-		using namespace std::chrono;
-		auto start = std::chrono::high_resolution_clock::now();
-		// Load secret shares for each server
-		std::vector<std::vector<std::vector<int64_t>>> secretShares;
-		for (int i = 1; i <= 6; i++) 
-		{ 
-			secretShares.push_back(loadSecretShares(i));
-		}
+	// TEST_F(ORAMTest, PutContainerMultipleORAMs)
+	// {
+	// 	using namespace std::chrono;
+	// 	auto start = std::chrono::high_resolution_clock::now();
+	// 	// Load secret shares for each server
+	// 	std::vector<std::vector<std::vector<int64_t>>> secretShares;
+	// 	for (int i = 1; i <= 6; i++) 
+	// 	{ 
+	// 		secretShares.push_back(loadSecretShares(i));
+	// 	}
 
-		std::vector<std::unique_ptr<ORAM>> oramInstances;
-		std::vector<std::shared_ptr<AbsStorageAdapter>> storages;
-		std::vector<std::shared_ptr<AbsPositionMapAdapter>> maps;
-		std::vector<std::shared_ptr<AbsStashAdapter>> stashes;
+	// 	std::vector<std::unique_ptr<ORAM>> oramInstances;
+	// 	std::vector<std::shared_ptr<AbsStorageAdapter>> storages;
+	// 	std::vector<std::shared_ptr<AbsPositionMapAdapter>> maps;
+	// 	std::vector<std::shared_ptr<AbsStashAdapter>> stashes;
 
-		for (size_t serverIndex = 0; serverIndex < secretShares.size(); serverIndex++)
-		{
-			auto [storage, map, stash, oram] = initialize(secretShares[serverIndex].size(), serverIndex);
-			populateStorage(storage);
-			oram->computeAndStoreAllBucketMACs();
+	// 	for (size_t serverIndex = 0; serverIndex < secretShares.size(); serverIndex++)
+	// 	{
+	// 		auto [storage, map, stash, oram] = initialize(secretShares[serverIndex].size(), serverIndex);
+	// 		populateStorage(storage);
+	// 		oram->computeAndStoreAllBucketMACs();
 
-			oramInstances.push_back(std::move(oram));
-			storages.push_back(storage);
-			maps.push_back(map);
-			stashes.push_back(stash);
-		}
+	// 		oramInstances.push_back(std::move(oram));
+	// 		storages.push_back(storage);
+	// 		maps.push_back(map);
+	// 		stashes.push_back(stash);
+	// 	}
 
-		// Now, time the population of each ORAM
-		for (size_t serverIndex = 0; serverIndex < secretShares.size(); ++serverIndex)
-		{
-			std::cout << "Populating ORAM for server " << serverIndex << std::endl;
-			number currentIndex = 0;
-			number blockID = 0;
+	// 	// Now, time the population of each ORAM
+	// 	for (size_t serverIndex = 0; serverIndex < secretShares.size(); ++serverIndex)
+	// 	{
+	// 		std::cout << "Populating ORAM for server " << serverIndex << std::endl;
+	// 		number currentIndex = 0;
+	// 		number blockID = 0;
 
 			
 
-			while (currentIndex < secretShares[serverIndex].size())
-			{
-				std::vector<std::vector<int64_t>> secretSharesPerBlock(
-					secretShares[serverIndex].begin() + currentIndex,
-					secretShares[serverIndex].begin() + std::min(currentIndex + 1000, (number)secretShares[serverIndex].size()));
+	// 		while (currentIndex < secretShares[serverIndex].size())
+	// 		{
+	// 			std::vector<std::vector<int64_t>> secretSharesPerBlock(
+	// 				secretShares[serverIndex].begin() + currentIndex,
+	// 				secretShares[serverIndex].begin() + std::min(currentIndex + 1000, (number)secretShares[serverIndex].size()));
 
-				ASSERT_NO_THROW(oramInstances[serverIndex]->putContainer(blockID, secretSharesPerBlock));
+	// 			ASSERT_NO_THROW(oramInstances[serverIndex]->putContainer(blockID, secretSharesPerBlock));
 
-				currentIndex += 1000;
-				blockID++;
-			}
-			// Save the state for this server after populating ORAM
-			disaster(storages[serverIndex], maps[serverIndex], stashes[serverIndex], oramInstances[serverIndex], serverIndex);
+	// 			currentIndex += 1000;
+	// 			blockID++;
+	// 		}
+	// 		// Save the state for this server after populating ORAM
+	// 		backupGenerator(storages[serverIndex], maps[serverIndex], stashes[serverIndex], oramInstances[serverIndex], serverIndex);
+	// 	}
+	// 	auto end = std::chrono::high_resolution_clock::now();
+	// 	auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+	// 	std::cout << "Time to populate ORAM for server " << ": " << duration_ms << " ms" << std::endl;
+	// }
+
+	TEST_F(ORAMTest, PutContinaerSingleORAM)
+	{
+		// Load and store secret shares for one server
+		std::vector<std::vector<int64_t>> secretShares = loadSecretShares();
+		auto [storage, map, stash, oram] = initialize(secretShares.size());
+		initialize(secretShares.size());
+		populateStorage(storage); // Called to set block ID's within each bucket across the entire ORAM
+
+		// Computer the MAC for the current buckets in storage
+		oram->computeAndStoreAllBucketMACs();
+
+		// Print the size of secret shares before storing them
+		std::cout << "Size of secret shares: " << secretShares.size() << std::endl;
+
+		number currentIndex = 0;
+		number blockID = 0;
+
+		while (currentIndex < secretShares.size())
+		{
+			// Get the next chunk of secret shares to store in the ORAM
+			std::vector<std::vector<int64_t>> secretSharesPerBlock(
+				secretShares.begin() + currentIndex,
+				secretShares.begin() + std::min(currentIndex + 1000, (number)secretShares.size()));
+
+			// Store the chunk in the ORAM
+			ASSERT_NO_THROW(oram->putContainer(blockID, secretSharesPerBlock));
+
+			// Update the current index and block ID
+			currentIndex += 1000;
+			blockID++;
 		}
-		auto end = std::chrono::high_resolution_clock::now();
-		auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-		std::cout << "Time to populate ORAM for server " << ": " << duration_ms << " ms" << std::endl;
+
+		// Get the container back from ORAM
+		std::vector<std::vector<int64_t>> retrievedShares;
+			for (number i = 0; i < blockID; i++)
+			{
+				std::cout << "retrievedShares for block ID: " << i << std::endl;
+					std::vector<std::vector<int64_t>> blockShares;
+					ASSERT_NO_THROW(blockShares = oram->getContainer(i));
+					
+					// Appending the retrieved shares to the retrievedShares vector
+					retrievedShares.insert(retrievedShares.end(), blockShares.begin(), blockShares.end());
+			}
+
+		// Verify that the retrieved shares match the original shares
+		ASSERT_EQ(secretShares.size(), retrievedShares.size());
+		for (size_t i = 0; i < secretShares.size(); ++i)
+		{
+			ASSERT_EQ(secretShares[i].size(), retrievedShares[i].size());
+			for (size_t j = 0; j < secretShares[i].size(); ++j)
+			{
+				ASSERT_EQ(secretShares[i][j], retrievedShares[i][j]);
+			}
+		}
+		backupGenerator(storage, map, stash, oram, 0);
 	}
 }
 

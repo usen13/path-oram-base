@@ -1,0 +1,19 @@
+FROM ubuntu:22.04
+
+LABEL maintainer="utsav.sen@stud.tu-darmstadt.de"
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Installing build tools and dependencies
+RUN apt-get update && \
+    apt-get install -y build-essential cmake git libgtest-dev libgmp-dev libgmpxx4ldbl libsodium-dev && \
+    cd /usr/src/gtest && cmake . && make && cp lib/*.a /usr/lib && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /workspace
+
+# Cloning the path-oram-base repository
+RUN git clone https://github.com/usen13/path-oram-base.git .
+
+# ...existing code...
+CMD ["tail", "-f", "/dev/null"]

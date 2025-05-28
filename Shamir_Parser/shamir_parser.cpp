@@ -52,9 +52,8 @@ std::vector<std::pair<int64_t, int64_t>> ShamirParser::shamirSecretSharingDouble
     std::vector<int64_t> coefficients(k);
     std::vector<std::pair<int64_t, int64_t>> shares;
 
-    // Generate random coefficients
-    std::random_device rd;
-    std::mt19937 gen(rd());
+    // Fixed random number generator using the secret, the number of shares n and the minimum share needed for reconstruction k
+    std::mt19937 gen(static_cast<uint32_t>(secret) ^ n ^ k);
     std::uniform_int_distribution<int64_t> dis(0, 100);
 
     coefficients[0] = static_cast<int64_t>(secret * 100); // Scale the floating point value
@@ -78,9 +77,8 @@ std::vector<std::pair<int64_t, int64_t>> ShamirParser::shamirSecretSharing(int64
     std::vector<int64_t> coefficients(k - 1);
     std::vector<std::pair<int64_t, int64_t>> shares;
 
-    // Generate random coefficients
-    std::random_device rd;
-    std::mt19937 gen(rd());
+    // Fixed random number generator using the secret, the number of shares n and the minimum share needed for reconstruction k
+    std::mt19937 gen(static_cast<uint32_t>(secret) ^ n ^ k);
     std::uniform_int_distribution<> dis(1, 100);
 
     coefficients[0] = secret;
