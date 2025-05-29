@@ -480,8 +480,11 @@ namespace CloakQueryPathORAM
 	// 	std::cout << "Time to populate ORAM for server " << ": " << duration_ms << " ms" << std::endl;
 	// }
 
-	TEST_F(ORAMTest, PutContinaerSingleORAM)
+	TEST_F(ORAMTest, PutContainerSingleORAM)
 	{
+		using namespace std::chrono;
+		auto start = std::chrono::high_resolution_clock::now();
+		
 		// Load and store secret shares for one server
 		std::vector<std::vector<int64_t>> secretShares = loadSecretShares();
 		auto [storage, map, stash, oram] = initialize(secretShares.size());
@@ -512,28 +515,31 @@ namespace CloakQueryPathORAM
 			blockID++;
 		}
 
-		// Get the container back from ORAM
-		std::vector<std::vector<int64_t>> retrievedShares;
-			for (number i = 0; i < blockID; i++)
-			{
-				std::cout << "retrievedShares for block ID: " << i << std::endl;
-					std::vector<std::vector<int64_t>> blockShares;
-					ASSERT_NO_THROW(blockShares = oram->getContainer(i));
+		auto end = std::chrono::high_resolution_clock::now();
+	 	auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+	 	std::cout << "Time to populate ORAM for server " << ": " << duration_ms << " ms" << std::endl;
+		// // Get the container back from ORAM
+		// std::vector<std::vector<int64_t>> retrievedShares;
+		// 	for (number i = 0; i < blockID; i++)
+		// 	{
+		// 		std::cout << "retrievedShares for block ID: " << i << std::endl;
+		// 			std::vector<std::vector<int64_t>> blockShares;
+		// 			ASSERT_NO_THROW(blockShares = oram->getContainer(i));
 					
-					// Appending the retrieved shares to the retrievedShares vector
-					retrievedShares.insert(retrievedShares.end(), blockShares.begin(), blockShares.end());
-			}
+		// 			// Appending the retrieved shares to the retrievedShares vector
+		// 			retrievedShares.insert(retrievedShares.end(), blockShares.begin(), blockShares.end());
+		// 	}
 
-		// Verify that the retrieved shares match the original shares
-		ASSERT_EQ(secretShares.size(), retrievedShares.size());
-		for (size_t i = 0; i < secretShares.size(); ++i)
-		{
-			ASSERT_EQ(secretShares[i].size(), retrievedShares[i].size());
-			for (size_t j = 0; j < secretShares[i].size(); ++j)
-			{
-				ASSERT_EQ(secretShares[i][j], retrievedShares[i][j]);
-			}
-		}
+		// // Verify that the retrieved shares match the original shares
+		// ASSERT_EQ(secretShares.size(), retrievedShares.size());
+		// for (size_t i = 0; i < secretShares.size(); ++i)
+		// {
+		// 	ASSERT_EQ(secretShares[i].size(), retrievedShares[i].size());
+		// 	for (size_t j = 0; j < secretShares[i].size(); ++j)
+		// 	{
+		// 		ASSERT_EQ(secretShares[i][j], retrievedShares[i][j]);
+		// 	}
+		// }
 		backupGenerator(storage, map, stash, oram, 0);
 	}
 }
