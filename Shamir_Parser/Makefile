@@ -33,7 +33,7 @@ $(TARGET): $(OBJS)
 # Clean up build files
 clean:
 	rm -f $(TARGET) $(OBJS)
-	rm -f ../shares/server_*.txt
+	find ../shares -maxdepth 1 -type f -name 'server_*.txt' -exec rm -f {} +
 #server_*.txt
 
 # Phony targets
