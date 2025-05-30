@@ -3,6 +3,7 @@
 #include <boost/format.hpp>
 #include <climits>
 #include <string>
+#include <cstring>
 #include <vector>
 #include <iostream>
 
