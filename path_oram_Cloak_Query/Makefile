@@ -13,18 +13,18 @@ CXXFLAGS= -I/usr/include/gtest -I/usr/include/gtest -I/usr/include -pthread
 LDFLAGS=-L $(LDIR) -L /usr/include/openssl -lgtest -lgtest_main -pthread -lsodium -g
 
 LDLIBS=-l boost_system -l ssl -l crypto # libs for main code
-REDISLIBS=-l redis++ -l hiredis # libs for redis support
+#REDISLIBS=-l redis++ -l hiredis # libs for redis support
 #AEROSPIKELIBS=-l aerospike -l dl -l z # libs for aerospike support
-LDTESTLIBS=-l gtest -l pthread -l benchmark -l gmock # libs for tests and benchmarks
+#LDTESTLIBS=-l gtest -l pthread -l benchmark -l gmock # libs for tests and benchmarks
 
 INCLUDES=-I $(IDIR) -I /usr/include/openssl
 override CPPFLAGS += --std=c++17 -Wall -Wno-unknown-pragmas -fPIC
 CC=g++
 RM=rm -rf
 
-ifeq ($(filter -DUSE_REDIS=false,$(CPPFLAGS)),)
-	LDLIBS += $(REDISLIBS)
-endif
+#ifeq ($(filter -DUSE_REDIS=false,$(CPPFLAGS)),)
+#	LDLIBS += $(REDISLIBS)
+#endif
 
 # ifeq ($(filter -DUSE_AEROSPIKE=false,$(CPPFLAGS)),)
 # 	LDLIBS += $(AEROSPIKELIBS)
