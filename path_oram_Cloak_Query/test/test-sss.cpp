@@ -5,7 +5,6 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include <boost/format.hpp>
 #include <math.h>
 
 namespace fs = std::filesystem;
