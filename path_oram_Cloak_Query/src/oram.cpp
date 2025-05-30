@@ -5,6 +5,7 @@
 #include <boost/format.hpp>
 #include <filesystem>
 #include <fstream>
+#include <cmath>
 
 namespace CloakQueryPathORAM
 {

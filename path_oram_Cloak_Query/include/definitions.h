@@ -10,9 +10,9 @@
 #define INPUT_CHECKS true
 #endif
 
-#ifndef USE_REDIS
-#define USE_REDIS true
-#endif
+// #ifndef USE_REDIS
+// #define USE_REDIS true
+// #endif
 
 // #ifndef USE_AEROSPIKE
 // #define USE_AEROSPIKE true

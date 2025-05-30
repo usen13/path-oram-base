@@ -6,9 +6,9 @@
 #include <boost/signals2/signal.hpp>
 #include <fstream>
 
-#if USE_REDIS
-#include <sw/redis++/redis++.h>
-#endif
+// #if USE_REDIS
+// #include <sw/redis++/redis++.h>
+// #endif
 
 // #if USE_AEROSPIKE
 // #include <aerospike/aerospike.h>
@@ -266,47 +266,47 @@ namespace CloakQueryPathORAM
 		bool supportsBatchSet() const final { return false; };
 	};
 
-#if USE_REDIS
-	/**
-	 * @brief Redis implementation of the storage adapter.
-	 *
-	 * Uses a Redis cluster as the underlying storage.
-	 */
-	class RedisStorageAdapter : public AbsStorageAdapter
-	{
-		private:
-		const unique_ptr<sw::redis::Redis> redis;
+// #if USE_REDIS
+// 	/**
+// 	 * @brief Redis implementation of the storage adapter.
+// 	 *
+// 	 * Uses a Redis cluster as the underlying storage.
+// 	 */
+// 	class RedisStorageAdapter : public AbsStorageAdapter
+// 	{
+// 		private:
+// 		const unique_ptr<sw::redis::Redis> redis;
 
-		public:
-		/**
-		 * @brief Construct a new Redis Storage Adapter object
-		 *
-		 * It is possible to persist the data.
-		 * If the file exists, instantiate with override = false, and the key equal to the one used before.
-		 *
-		 * @param capacity the max number of blocks
-		 * @param userBlockSize the size of the user's portion of the block in bytes
-		 * @param key the AES key to use (may be empty to generate new random one)
-		 * @param host the URL to the Redis cluster (will throw exception if ping on the URL fails)
-		 * @param override if true, the cluster will be flushed and filled with random blocks first
-		 * @param Z the number of blocks in a bucket.
-		 * GET and SET will operate using Z.
-		 * @param batchLimit the maximum number of requests in a batch.
-		 */
-		RedisStorageAdapter(const number capacity, const number userBlockSize, const bytes key, const string host, const bool override, const number Z, const number batchLimit = 300000);
-		~RedisStorageAdapter() final;
+// 		public:
+// 		/**
+// 		 * @brief Construct a new Redis Storage Adapter object
+// 		 *
+// 		 * It is possible to persist the data.
+// 		 * If the file exists, instantiate with override = false, and the key equal to the one used before.
+// 		 *
+// 		 * @param capacity the max number of blocks
+// 		 * @param userBlockSize the size of the user's portion of the block in bytes
+// 		 * @param key the AES key to use (may be empty to generate new random one)
+// 		 * @param host the URL to the Redis cluster (will throw exception if ping on the URL fails)
+// 		 * @param override if true, the cluster will be flushed and filled with random blocks first
+// 		 * @param Z the number of blocks in a bucket.
+// 		 * GET and SET will operate using Z.
+// 		 * @param batchLimit the maximum number of requests in a batch.
+// 		 */
+// 		RedisStorageAdapter(const number capacity, const number userBlockSize, const bytes key, const string host, const bool override, const number Z, const number batchLimit = 300000);
+// 		~RedisStorageAdapter() final;
 
-		protected:
-		void setInternal(const number location, const bytes &raw) final;
-		void getInternal(const number location, bytes &reponse) const final;
+// 		protected:
+// 		void setInternal(const number location, const bytes &raw) final;
+// 		void getInternal(const number location, bytes &reponse) const final;
 
-		void setInternal(const vector<pair<number, bytes>> &requests) final;
-		void getInternal(const vector<number> &locations, vector<bytes> &response) const final;
+// 		void setInternal(const vector<pair<number, bytes>> &requests) final;
+// 		void getInternal(const vector<number> &locations, vector<bytes> &response) const final;
 
-		bool supportsBatchGet() const final { return true; };
-		bool supportsBatchSet() const final { return true; };
-	};
-#endif
+// 		bool supportsBatchGet() const final { return true; };
+// 		bool supportsBatchSet() const final { return true; };
+// 	};
+// #endif
 
 // #if USE_AEROSPIKE
 // 	/**
