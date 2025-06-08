@@ -1,0 +1,4 @@
+SELECT MIN(EXTENDEDPRICE) AS min_extended_price
+FROM lineitem
+WHERE RETURNFLAG = 'N';
+

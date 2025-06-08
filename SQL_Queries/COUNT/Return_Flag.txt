@@ -1,0 +1,3 @@
+SELECT COUNT(RETURNFLAG) AS lineitem_count
+FROM lineitem
+WHERE RETURNFLAG = 'N'

@@ -1,0 +1,4 @@
+SELECT MAX(EXTENDEDPRICE) AS max_extended_price
+FROM lineitem
+WHERE RETURNFLAG = 'R';
+

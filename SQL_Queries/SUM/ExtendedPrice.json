@@ -1,0 +1,15 @@
+{
+    "select": [
+        {
+            "query_type": "SUM",
+            "attribute": "EXTENDEDPRICE",
+            "variable": "total_extended_price"
+        }
+    ],
+    "filters": [
+        {
+            "attribute": "RETURNFLAG",
+            "condition": "A"
+        }
+    ]
+}

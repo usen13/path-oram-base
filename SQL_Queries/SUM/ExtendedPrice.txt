@@ -1,0 +1,4 @@
+SELECT SUM(EXTENDEDPRICE) AS total_extended_price
+FROM lineitem
+WHERE RETURNFLAG = 'A';
+

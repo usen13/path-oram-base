@@ -1,0 +1,15 @@
+{
+    "select": [
+        {
+            "query_type": "MIN",
+            "attribute": "EXTENDEDPRICE",
+            "variable": "min_extended_price"
+        }
+    ],
+    "filters": [
+        {
+            "attribute": "RETURNFLAG",
+            "condition": "N"
+        }
+    ]
+}

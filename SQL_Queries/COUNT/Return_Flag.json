@@ -1,0 +1,15 @@
+{
+    "select": [
+        {
+            "query_type": "COUNT",
+            "attribute": "RETURNFLAG",
+            "variable": "lineitem_count"
+        }
+    ],
+    "filters": [
+        {
+            "attribute": "RETURNFLAG",
+            "condition": "N"
+        }
+    ]
+}

@@ -1,0 +1,15 @@
+{
+    "select": [
+        {
+            "query_type": "MAX",
+            "attribute": "EXTENDEDPRICE",
+            "variable": "max_extended_price"
+        }
+    ],
+    "filters": [
+        {
+            "attribute": "RETURNFLAG",
+            "condition": "R"
+        }
+    ]
+}

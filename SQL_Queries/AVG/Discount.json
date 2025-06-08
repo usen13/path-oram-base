@@ -1,0 +1,15 @@
+{
+    "select": [
+        {
+            "query_type": "AVG",
+            "attribute": "DISCOUNT",
+            "variable": "avg_discount"
+        }
+    ],
+    "filters": [
+        {
+            "attribute": "RETURNFLAG",
+            "condition": "A"
+        }
+    ]
+}
