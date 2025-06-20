@@ -5,7 +5,7 @@ CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -g
 
 # Linker flags
-LDFLAGS=-L $(LDIR)	-lgtest -lgtest_main -pthread -lsodium -lgmp -lgmpxx
+LDFLAGS=-L $(LDIR)	-lgtest -lgtest_main -pthread -lsodium
 
 # Target executable
 TARGET = shamir_parser

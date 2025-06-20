@@ -47,10 +47,14 @@ namespace CloakQueryPathORAM
 			storage->fillWithZeroes();
 
 			// generate random position map
+			auto start = std::chrono::high_resolution_clock::now();
 			for (number i = 0; i < blocks; ++i)
 			{
 				map->set(i, getRandomULong(1 << (height - 1)));
 			}
+			auto end = std::chrono::high_resolution_clock::now();
+			auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+			std::cout << "PM population with data: " << duration.count() << " milliseconds" << std::endl;
 			
 			// Compute and store MACs for all buckets
 			//computeAndStoreAllBucketMACs();
@@ -79,7 +83,7 @@ namespace CloakQueryPathORAM
 
 	void ORAM::put(const number block, const bytes &data)
 	{
-		std::cout << "Put function call" << std::endl;
+		//std::cout << "Put function call" << std::endl;
 		std::cout << "Putting data for block: " << block << ", Data size: " << data.size() << std::endl;
 		bytes response;
 		access(false, block, data, response);
@@ -177,14 +181,14 @@ namespace CloakQueryPathORAM
 
 	void ORAM::access(const bool read, const number block, const bytes &data, bytes &response)
 	{
-		std::cout << "Accessing and remapping block: " << block << std::endl;
+		//std::cout << "Accessing and remapping block: " << block << std::endl;
 		// step 1 from paper: remap block
 		const auto previousPosition = map->get(block);
-		auto start = std::chrono::high_resolution_clock::now();
+		//auto start = std::chrono::high_resolution_clock::now();
 		map->set(block, getRandomULong(1 << (height - 1)));
-		auto end = std::chrono::high_resolution_clock::now();
-		auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-		std::cout << "Remapping took: " << duration.count() << " microseconds" << std::endl;
+		//auto end = std::chrono::high_resolution_clock::now();
+		//auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+		//std::cout << "Remapping took: " << duration.count() << " microseconds" << std::endl;
 		// Increment the access count for that block
 		accessCount[block]++;
 
@@ -215,21 +219,15 @@ namespace CloakQueryPathORAM
 
 	void ORAM::putContainer(const number block, const vector<vector<int64_t>> &container)
 	{
-		std::cout << "Putting container for block: " << block << std::endl;
+		//std::cout << "Putting container for block: " << block << std::endl;
 		bytes serializedData = serialize(container);
 
 		// Manage the scenario when the data is smaller than the block size
 		uint64_t dataSize = serializedData.size();
 
 		bytes macSerializedData = hmac(key, serializedData);
-
-		//Print out the mac of the serialized data
-		std::cout << "MAC of serialized data: ";
-		for (const auto &byte : macSerializedData)
-		{
-			std::cout << std::hex << (int)byte;
-		}
-		std::cout << std::endl << "Size of MAC:" << macSerializedData.size() << std::endl;
+		
+		//std::cout << std::endl << "Size of MAC:" << macSerializedData.size() << std::endl;
 		// Create a new variable with the size of the data
 		bytes dataWithSize(sizeof(dataSize));
 		memcpy(dataWithSize.data(), &dataSize, sizeof(dataSize));
@@ -238,14 +236,16 @@ namespace CloakQueryPathORAM
 		
 		// Return the data to the ORAM
 		put(block, dataWithSize);
+
+		usedBlockIDs.insert(block); // Track this block as used
 	}
 
 	vector<vector<int64_t>> ORAM::getContainer(const number block)
 	{
-		std::cout << "Getting container for block: " << block << std::endl;
+		//std::cout << "Getting container for block: " << block << std::endl;
 		bytes blockData;
 		get(block, blockData);
-		std::cout << "Getting container for block: " << block << ", Data size: " << blockData.size() << std::endl;
+		//std::cout << "Getting container for block: " << block << ", Data size: " << blockData.size() << std::endl;
 		// Check if the block is empty
 		if (blockData.empty())
 		{
@@ -256,7 +256,7 @@ namespace CloakQueryPathORAM
 		uint64_t dataSize = 0;
 		memcpy(&dataSize, blockData.data(), sizeof(dataSize));
 
-		// Extract only the serialized data using the size
+		// Extract only the serialized data
     	bytes serializedData(blockData.begin() + sizeof(dataSize), blockData.begin() + sizeof(dataSize) + dataSize);
 
 		return deserialize(serializedData);
@@ -264,7 +264,7 @@ namespace CloakQueryPathORAM
 
 	void ORAM::readPath(const number leaf, unordered_set<number> &path, const bool putInStash)
 	{
-		std::cout << "Reading path for leaf: " << leaf << std::endl;
+		//std::cout << "Reading path for leaf: " << leaf << std::endl;
 		// for levels from root to leaf
 		for (number level = 0; level < height; level++)
 		{
@@ -278,10 +278,10 @@ namespace CloakQueryPathORAM
 			vector<block> blocks;
 			getCache(path, blocks, false);
 			// print blocks
-			for (const auto &block : blocks)
-			{
-				std::cout << "Block ID::::::: " << block.first << ", Data Size: " << block.second.size() << std::endl;
-			}
+			// for (const auto &block : blocks)
+			// {
+			// 	std::cout << "Block ID::::::: " << block.first << ", Data Size: " << block.second.size() << std::endl;
+			// }
 
 			for (auto &&[id, data] : blocks)
 			{
@@ -295,7 +295,7 @@ namespace CloakQueryPathORAM
 			// Verify the integrity of each bucket in the path
 			for (const auto &bucketId : path)
 			{
-				std::cout << "Verifying bucket integrity for ID: " << bucketId << std::endl;
+				//std::cout << "Verifying bucket integrity for ID: " << bucketId << std::endl;
 				const auto &bucketData = cache[bucketId]; // Retrieve the bucket from the cach
 				
 				number level = 0;
@@ -315,7 +315,7 @@ namespace CloakQueryPathORAM
 
 	void ORAM::writePath(const number leaf)
 	{
-		std::cout << "Writing path for leaf: " << leaf << std::endl;
+		//std::cout << "Writing path for leaf: " << leaf << std::endl;
 		vector<block> currentStash;
 		stash->getAll(currentStash);
 
@@ -397,7 +397,7 @@ namespace CloakQueryPathORAM
 			stash->deleteBlock(removed);
 		}
 
-		std::cout << "Write path completed for leaf: " << leaf << std::endl;
+		//std::cout << "Write path completed for leaf: " << leaf << std::endl;
 	}
 
 	void ORAM::computeAndStoreAllBucketMACs()
@@ -531,7 +531,7 @@ namespace CloakQueryPathORAM
 		for (auto &&request : requests)
 		{
 			// Print the size of the data being set in the cache
-			std::cout << "Setting cache for bucket ID: " << request.first << ", Number of blocks: " << request.second.size() << std::endl;
+			//std::cout << "Setting cache for bucket ID: " << request.first << ", Number of blocks: " << request.second.size() << std::endl;
 			cache[request.first] = request.second;
 		}
 	}
@@ -545,12 +545,12 @@ namespace CloakQueryPathORAM
 
 	void ORAM::computeAndStoreBucketMAC(const number level, const number leaf, const bucket &bucketData)
 	{
-		std::cout << "Currently at level: " << level << ", leaf: " << leaf << std::endl;
+		//std::cout << "Currently at level: " << level << ", leaf: " << leaf << std::endl;
 		//Dynamically calculate the bucket ID
 		const number bucketId = bucketForLevelLeaf(level, leaf);
 
 		bytes concatenatedData;
-		std::cout << "Computing MAC for bucket..." << bucketId << std::endl;
+		//std::cout << "Computing MAC for bucket..." << bucketId << std::endl;
 
 		// Compute the MAC for each block in the bucket
 		for (size_t i = 0; i < Z; i++)
@@ -559,28 +559,28 @@ namespace CloakQueryPathORAM
 		}
 
 		// Print the block ID in the bucket and the corresponding data size
-		for (const auto &block : bucketData)
-		{
-			std::cout << "Block ID durin MAC computing: " << block.first << ", Data Size: " << block.second.size() << std::endl;
-		}
+		// for (const auto &block : bucketData)
+		// {
+		// 	std::cout << "Block ID durin MAC computing: " << block.first << ", Data Size: " << block.second.size() << std::endl;
+		// }
 
 		// Compute MAC using the stored key 
 		bytes hash = hmac(key, concatenatedData);
 		
 		macMap[bucketId] = hash; // Store the MAC in the map
 		// Print macMap
-		std::cout << "MAC for bucket ID " << bucketId << ": ";
-		for (const auto &byte : hash)
-		{
-			std::cout << std::hex << static_cast<int>(byte);
-		}
+		// std::cout << "MAC for bucket ID " << bucketId << ": ";
+		// for (const auto &byte : hash)
+		// {
+		// 	std::cout << std::hex << static_cast<int>(byte);
+		// }
 		std::cout << std::endl;
 		//hash.resize(dataSize, 0x00); // Resize to match the block size
 		//bucketData[Z-1].first = ULONG_MAX; // Use ULONG_MAX as the block ID for the hash
 		//bucketData[Z-1].second = hash; 
 		//std::cout << "Block hash size for bucket: " << bucketData[Z-1].second.size() << std::endl;
 		// Debug: Print the size of the MAC
-		std::cout << "Stored MAC for bucket ID " << bucketId << ": " << hash.size() << " bytes" << std::endl;
+		//std::cout << "Stored MAC for bucket ID " << bucketId << ": " << hash.size() << " bytes" << std::endl;
 	}
 
 	bytes loadKeyFromFile(const std::string &filename)
@@ -644,7 +644,7 @@ namespace CloakQueryPathORAM
 
 		// During intitlization the verification should be skipped
 		if (isInitializing)	{
-			std::cout << "Ignore verification during initilaization " << std::endl;
+			//std::cout << "Ignore verification during initilaization " << std::endl;
 			return true; 
 		}
 
@@ -658,7 +658,7 @@ namespace CloakQueryPathORAM
 		}
 		const bytes &storedMAC = it->second;
 		// Print the bucket ID
-		std::cout << "Verifying MAC for bucket ID: " << bucketId << std::endl;
+		//std::cout << "Verifying MAC for bucket ID: " << bucketId << std::endl;
 
 		// Concatenate the data from the other blocks in the bucket
 		bytes concatenatedData;
@@ -669,20 +669,20 @@ namespace CloakQueryPathORAM
 		}
 		// Compute the MAC for the concatenated data using the stored key
 		bytes computedMAC = hmac(key, concatenatedData);
-		std::cout << "Stored MAC: " << storedMAC.size() << std::endl;
-		// Print Stored MAC
-		for (const auto &byte : storedMAC)
-		{
-			std::cout << std::hex << static_cast<int>(byte);
-		}
-		std::cout << std::endl;
-		std::cout << "Computed MAC: " << computedMAC.size() << std::endl;
-		// Print Computed MAC
-		for (const auto &byte : computedMAC)
-		{
-			std::cout << std::hex << static_cast<int>(byte);
-		}
-		std::cout << std::endl;
+		// std::cout << "Stored MAC: " << storedMAC.size() << std::endl;
+		// // Print Stored MAC
+		// for (const auto &byte : storedMAC)
+		// {
+		// 	std::cout << std::hex << static_cast<int>(byte);
+		// }
+		// std::cout << std::endl;
+		// std::cout << "Computed MAC: " << computedMAC.size() << std::endl;
+		// // Print Computed MAC
+		// for (const auto &byte : computedMAC)
+		// {
+		// 	std::cout << std::hex << static_cast<int>(byte);
+		// }
+		// std::cout << std::endl;
 
 		if (computedMAC != computedMAC)
 		{

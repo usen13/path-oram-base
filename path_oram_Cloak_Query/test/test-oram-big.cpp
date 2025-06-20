@@ -71,11 +71,11 @@ namespace CloakQueryPathORAM
 				case StorageAdapterTypeFileSystem:
 					this->storage = shared_ptr<AbsStorageAdapter>(new FileSystemStorageAdapter(CAPACITY + Z, BLOCK_SIZE, KEY, FILENAME, true, Z));
 					break;
-#if USE_REDIS
-				case StorageAdapterTypeRedis:
-					this->storage = shared_ptr<AbsStorageAdapter>(new RedisStorageAdapter(CAPACITY + Z, BLOCK_SIZE, KEY, REDIS_HOST, true, Z));
-					break;
-#endif
+// #if USE_REDIS
+// 				case StorageAdapterTypeRedis:
+// 					this->storage = shared_ptr<AbsStorageAdapter>(new RedisStorageAdapter(CAPACITY + Z, BLOCK_SIZE, KEY, REDIS_HOST, true, Z));
+// 					break;
+// #endif
 // #if USE_AEROSPIKE
 // 				case StorageAdapterTypeAerospike:
 // 					this->storage = shared_ptr<AbsStorageAdapter>(new AerospikeStorageAdapter(CAPACITY + Z, BLOCK_SIZE, KEY, AEROSPIKE_HOST, true, Z));
@@ -114,12 +114,12 @@ namespace CloakQueryPathORAM
 // 			}
 // #endif
 			storage.reset();
-#if USE_REDIS
-			if (get<3>(GetParam()) == StorageAdapterTypeRedis)
-			{
-				make_unique<sw::redis::Redis>(REDIS_HOST)->flushall();
-			}
-#endif
+// #if USE_REDIS
+// 			if (get<3>(GetParam()) == StorageAdapterTypeRedis)
+// 			{
+// 				make_unique<sw::redis::Redis>(REDIS_HOST)->flushall();
+// 			}
+// #endif
 		}
 
 		/**
@@ -179,23 +179,23 @@ namespace CloakQueryPathORAM
 			{7, 4, 64, StorageAdapterTypeInMemory, false, true, 10},
 		};
 
-#if USE_REDIS
-		for (auto host : vector<string>{"127.0.0.1", "redis"})
-		{
-			try
-			{
-				// test if Redis is availbale
-				auto connection = "tcp://" + host + ":6379";
-				make_unique<sw::redis::Redis>(connection)->ping();
-				result.push_back({5, 3, 32, StorageAdapterTypeRedis, true, false, 1});
-				CloakQueryPathORAM::ORAMBigTest::REDIS_HOST = connection;
-				break;
-			}
-			catch (...)
-			{
-			}
-		}
-#endif
+// #if USE_REDIS
+// 		for (auto host : vector<string>{"127.0.0.1", "redis"})
+// 		{
+// 			try
+// 			{
+// 				// test if Redis is availbale
+// 				auto connection = "tcp://" + host + ":6379";
+// 				make_unique<sw::redis::Redis>(connection)->ping();
+// 				result.push_back({5, 3, 32, StorageAdapterTypeRedis, true, false, 1});
+// 				CloakQueryPathORAM::ORAMBigTest::REDIS_HOST = connection;
+// 				break;
+// 			}
+// 			catch (...)
+// 			{
+// 			}
+// 		}
+// #endif
 
 #if USE_AEROSPIKE
 		for (auto host : vector<string>{"127.0.0.1", "aerospike"})
