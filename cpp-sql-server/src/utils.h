@@ -4,23 +4,33 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <vector>
+#include <nlohmann/json.hpp> // Include nlohmann/json for JSON parsing
 
 namespace Utils {
 
-void log(const std::string& message) {
-    std::ofstream logFile("server.log", std::ios_base::app);
-    if (logFile.is_open()) {
-        logFile << message << std::endl;
-    } else {
-        std::cerr << "Unable to open log file." << std::endl;
-    }
-}
+void log(const std::string& message);
+std::string trim(const std::string& str);
 
-std::string trim(const std::string& str) {
-    size_t first = str.find_first_not_of(' ');
-    size_t last = str.find_last_not_of(' ');
-    return (first == std::string::npos || last == std::string::npos) ? "" : str.substr(first, last - first + 1);
-}
+// Structs for select/filter elements
+struct SelectItem {
+    std::string query_type;
+    std::string attribute;
+    std::string variable;
+};
+
+struct FilterItem {
+    std::string attribute;
+    std::string condition;
+    std::string whereClause;
+};
+
+void parseQueryJson(
+    const std::string& filename,
+    std::vector<Utils::SelectItem>& selectItems,
+    std::vector<Utils::FilterItem>& filterItems,
+    std::pair<Utils::SelectItem, std::vector<Utils::FilterItem>>& allItems
+);
 
 } // namespace Utils
 

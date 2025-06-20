@@ -13,3 +13,4 @@ docs/
 ipch
 path-oram/bin/*
 !path-oram/bin/.gitkeep
+cpp-sql-server/venv/

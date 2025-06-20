@@ -10,6 +10,13 @@
         {
             "attribute": "RETURNFLAG",
             "condition": "N"
+        },
+        {
+            "whereClause": "AND"
+        },
+        {
+            "attribute": "LINESTATUS",
+            "condition": "O"
         }
     ]
 }

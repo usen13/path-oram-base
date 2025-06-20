@@ -1,5 +1,5 @@
 #include "gtest/gtest.h"
-#include "server.h"
+#include "../src/server.h"
 
 class ServerTest : public ::testing::Test {
 protected:

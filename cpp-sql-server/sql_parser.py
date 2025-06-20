@@ -75,8 +75,13 @@ def extract_where_conditions(where_token):
                             "attribute": attr,
                             "condition": f"{val1} AND {val2}"
                         })
+                        filters.append({"whereClause": "BETWEEN"})
                 recurse(tok.tokens)  # Keep recursing
-
+            # Insert AND/OR between conditions
+            if i + 1 < len(tokens):
+                next_tok = tokens[i + 1]
+                if next_tok.ttype == Keyword and next_tok.value.upper() in ("AND", "OR"):
+                    filters.append({"whereClause": next_tok.value.upper()})
             i += 1
 
     if isinstance(where_token, TokenList):
