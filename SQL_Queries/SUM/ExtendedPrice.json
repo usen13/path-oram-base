@@ -8,8 +8,8 @@
     ],
     "filters": [
         {
-            "attribute": "RETURNFLAG",
-            "condition": "A"
+            "attribute": "SHIPMODE",
+            "condition": "MAIL"
         },
         {
             "whereClause": "AND"

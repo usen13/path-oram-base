@@ -125,11 +125,6 @@ namespace CloakQueryPathORAM
 		//inline static const number CAPACITY = (1 << LOG_CAPACITY); // Total number of blocks in ORAM
 
 		protected:
-		// REMOVED BECAUSE THE SAME ORAM INSTANCE SHOULD NOT BE SHARED ACROSS TESTS
-		// unique_ptr<ORAM> oram;
-		// shared_ptr<AbsStorageAdapter> storage;
-		// shared_ptr<AbsStashAdapter> stash;
-		// shared_ptr<AbsPositionMapAdapter> map;
 
 		// Change initialize to return all components for each ORAM instance
 		std::tuple<

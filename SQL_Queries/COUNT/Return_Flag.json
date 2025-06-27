@@ -3,13 +3,13 @@
         {
             "query_type": "COUNT",
             "attribute": "RETURNFLAG",
-            "variable": "lineitem_count"
+            "variable": "return_count"
         }
     ],
     "filters": [
         {
-            "attribute": "RETURNFLAG",
-            "condition": "N"
+            "attribute": "SHIPMODE",
+            "condition": "AIR"
         },
         {
             "whereClause": "AND"

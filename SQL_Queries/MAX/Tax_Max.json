@@ -1,22 +1,22 @@
 {
     "select": [
         {
-            "query_type": "MIN",
-            "attribute": "EXTENDEDPRICE",
-            "variable": "min_extended_price"
+            "query_type": "MAX",
+            "attribute": "TAX",
+            "variable": "max_tax"
         }
     ],
     "filters": [
         {
             "attribute": "SHIPMODE",
-            "condition": "RAIL"
+            "condition": "FOB"
         },
         {
             "whereClause": "AND"
         },
         {
             "attribute": "LINESTATUS",
-            "condition": "O"
+            "condition": "F"
         }
     ]
 }

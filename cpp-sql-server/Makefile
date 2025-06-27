@@ -24,9 +24,4 @@ test:
 clean:
 	rm -f $(SRC_DIR)/*.o $(TARGET)
 	@if [ -f tests/Makefile ]; then $(MAKE) -C tests clean; fi
-
-#sql_handler_test: src/sql_handler.cpp
-#	$(CXX) $(CXXFLAGS) -o sql_handler_test src/sql_handler.cpp
-
-#run_sql_handler_test: sql_handler_test
-#	./sql_handler_test
+	rm -rf ../Shamir_Search_Results

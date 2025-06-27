@@ -1,0 +1,3 @@
+SELECT MAX(TAX) AS max_tax
+FROM lineitem
+WHERE SHIPMODE = 'FOB' AND LINESTATUS = 'F';

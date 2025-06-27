@@ -1,0 +1,3 @@
+SELECT AVG(QUANTITY) AS avg_quanity
+FROM lineitem
+WHERE SHIPMODE = 'AIR' OR LINESTATUS = 'O';

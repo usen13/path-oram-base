@@ -5,25 +5,6 @@
 #include <filesystem>
 #include "utils.h"
 
-std::variant<int64_t, double> SQLHandler::executeAggregationQuery(const std::string& query) {
-    std::string upperQuery = query;
-    std::transform(upperQuery.begin(), upperQuery.end(), upperQuery.begin(), ::toupper);
-
-    if (upperQuery.find("COUNT") == 0) {
-        return convertCountORAMQuery(query);
-    } else if (upperQuery.find("SUM") == 0) {
-        return convertSumORAMQuery(query);
-    } else if (upperQuery.find("AVG") == 0) {
-        return convertAvgORAMQuery(query);
-    } else if (upperQuery.find("MIN") == 0) {
-        return convertMinORAMQuery(query);
-    } else if (upperQuery.find("MAX") == 0) {
-        return convertMaxORAMQuery(query);
-    } else {
-        throw std::invalid_argument("Unsupported aggregation query");
-    }
-}
-
 std::vector<std::pair<int64_t, int64_t>> SQLHandler::shamirSecretSharing(int64_t& secret, int n, int k) {
     std::vector<int64_t> coefficients(k - 1);
     std::vector<std::pair<int64_t, int64_t>> shares;
@@ -53,41 +34,17 @@ std::vector<std::pair<int64_t, int64_t>> SQLHandler::shamirSecretSharing(int64_t
     return shares;
 }
 
+// Function to convert string to integer (simple example using ASCII values)
+int64_t stringToInt(const std::string& str) {
+    int64_t result = 0;
+    for (char c : str) {
+        result = result * 256 + static_cast<int>(c);
+    }
+    return result;
+}
+
 SQLHandler::SQLHandler() = default;
 SQLHandler::~SQLHandler() = default;
-
-int64_t SQLHandler::convertCountORAMQuery(const std::string& query) {
-    // Use selectItems and filterItems as needed
-    if (selectItems.empty()) throw std::runtime_error("No select items loaded");
-    std::string attribute = selectItems[0].attribute;
-    std::string variable = selectItems[0].variable;
-    // ... use attribute/variable and filterItems for query logic ...
-    return 0; // placeholder
-}
-
-int64_t SQLHandler::convertSumORAMQuery(const std::string& query) {
-    // TODO: Implement logic
-    return 0;
-}
-
-double SQLHandler::convertAvgORAMQuery(const std::string& query) {
-    // TODO: Implement logic
-    return 0.0;
-}
-
-int64_t SQLHandler::convertMinORAMQuery(const std::string& query) {
-    // TODO: Implement logic
-    return 0;
-}
-
-int64_t SQLHandler::convertMaxORAMQuery(const std::string& query) {
-    // TODO: Implement logic
-    return 0;
-}
-
-std::vector<std::vector<int64_t>> SQLHandler::getResults() const {
-    return results;
-}
 
 void SQLHandler::setSelectItems(const std::vector<Utils::SelectItem>& items) { selectItems = items; }
 void SQLHandler::setFilterItems(const std::vector<Utils::FilterItem>& items) { filterItems = items; }
@@ -95,13 +52,45 @@ void SQLHandler::setAttributeSecrets(const std::string& secrets) { attributeSecr
 void SQLHandler::setConditionSecrets(const int64_t& secrets) { conditionSecrets.emplace_back(secrets); }
 void SQLHandler::setWhereClauses(const std::string& clauses) { whereClauses = clauses; }
 
+AtrributeID SQLHandler::attributeStringToEnum(const std::string& attr) {
+    static const std::unordered_map<std::string, AtrributeID> attrMap = {
+        {"ORDERKEY", orderKeyID},
+        {"PARTKEY", partKeyID},
+        {"SUPPKEY", suppKeyID},
+        {"LINENUMBER", lineNumberID},
+        {"QUANTITY", quantityID},
+        {"EXTENDEDPRICE", extendedPriceID},
+        {"DISCOUNT", discountID},
+        {"TAX", taxID},
+        {"RETURNFLAG", returnFlagID},
+        {"LINESTATUS", lineStatusID},
+        {"SHIPDATE", shipDateID},
+        {"COMMITDATE", commitDateID},
+        {"RECEIPTDATE", receiptDateID},
+        {"SHIPINSTRUCT", shipInStructID},
+        {"SHIPMODE", shipModeID},
+        {"COMMENT", commentID},
+        {"ALL", allID}
+    };
+    auto it = attrMap.find(attr);
+    if (it != attrMap.end()) {
+        return it->second;
+    }
+    throw std::invalid_argument("Unknown attribute: " + attr);
+}
+
 int main () {
     // Intialize SQLHandler
     SQLHandler sqlHandler;
+    //std::unique_ptr<SQLHandler> sqlHandler = std::make_unique<SQLHandler>;
     namespace fs = std::filesystem;
-    //std::vector<Utils::SelectItem> allSelectItems;
-    //std::vector<Utils::FilterItem> allFilterItems;
+    std::vector<int64_t> conditionals;
+    std::string outputDir = "../Shamir_Search_Results";
+    std::filesystem::create_directory(outputDir);
+    std::vector<std::pair<int64_t, int64_t>> secretShares;
     std::pair<Utils::SelectItem, std::vector<Utils::FilterItem>> combinedItems;
+
+
     // Create a vector to hold all the combined items
     std::vector<std::pair<Utils::SelectItem, std::vector<Utils::FilterItem>>> allItemsList;
     try {
@@ -112,44 +101,45 @@ int main () {
                 std::vector<Utils::FilterItem> filterItems;
                 Utils::parseQueryJson(dirEntry.path().string(), selectItems, filterItems, combinedItems);
 
-                // Append to the main vectors
-                // allSelectItems.insert(allSelectItems.end(), selectItems.begin(), selectItems.end());
-                // allFilterItems.insert(allFilterItems.end(), filterItems.begin(), filterItems.end());
-
                 std::cout << "Parsed: " << dirEntry.path() << std::endl;
                 allItemsList.emplace_back(combinedItems);
             }
         }
         // Now selectItems and filterItems are populated from the JSON file
         for (const auto& item : allItemsList) {
+            secretShares.clear(); // Clear secret shares for each item
+            conditionals.clear();
             const auto& selectItem = item.first;
             std::cout << "Select: " << selectItem.query_type << ", " << selectItem.attribute << ", " << selectItem.variable << std::endl;
-            if (selectItem.query_type == "COUNT") {
-                for (const auto& item : item.second) {
-                    std::cout << "Filter: " << item.attribute << " = " << item.condition << ", whereClause: " << item.whereClause << std::endl;
-                    if (!item.attribute.empty()) {
-                        sqlHandler.setAttributeSecrets(item.attribute);
-                    }
-                    if (!item.condition.empty()) {
-                        sqlHandler.setConditionSecrets(static_cast<int64_t>(item.condition[0]));
-                    }
+            for (const auto& item : item.second) {
+                std::cout << "Filter: " << item.attribute << " = " << item.condition << ", whereClause: " << item.whereClause << std::endl;
+                if (!item.attribute.empty()) {
+                    sqlHandler.setAttributeSecrets(item.attribute);
                 }
-                std::vector<int64_t> conditionals = sqlHandler.getConditionSecrets(); // Access condition secrets
-                for (auto cond : conditionals) {
-                    std::cout << "Condition secret: " << cond << std::endl;
-                    sqlHandler.shamirSecretSharing(cond, 6, 3); // Example usage
+                if (!item.condition.empty()) {
+                    sqlHandler.setConditionSecrets(static_cast<int64_t>(stringToInt(item.condition))); // Casting to ASCII value to match secret sharing
+                    conditionals.emplace_back(static_cast<int64_t>(stringToInt(item.condition))); // Used for persistance by saving in a file.
                 }
-                sqlHandler.convertCountORAMQuery(selectItem.attribute);
-                std::cout << "Count query for attribute: " << selectItem.attribute << std::endl;
-                continue; // Skip to next select item
-            } else if (selectItem.query_type == "SUM") {
-                std::cout << "Sum query for attribute: " << selectItem.attribute << std::endl;
-            } else if (selectItem.query_type == "AVG") {
-                std::cout << "Average query for attribute: " << selectItem.attribute << std::endl;
-            } else if (selectItem.query_type == "MIN") {
-                std::cout << "Min query for attribute: " << selectItem.attribute << std::endl;
-            } else if (selectItem.query_type == "MAX") {
-                std::cout << "Max query for attribute: " << selectItem.attribute << std::endl;
+            }
+            // Calculate the secret shares for each conditional value
+            for (auto cond : conditionals) {
+                std::cout << "Condition secret: " << cond << std::endl;
+                auto shares = sqlHandler.shamirSecretSharing(cond, 6, 3);
+                secretShares.insert(secretShares.end(), shares.begin(), shares.end());
+            }
+
+            std::cout << "Count query for attribute: " << selectItem.attribute << std::endl;
+
+            // Write results to a text file for parsing later
+            std::ofstream file (outputDir + "/Shares_" + selectItem.query_type + ".txt", std::ios::app);
+            if (file.is_open()) {
+                for (const auto& share : secretShares) {
+                    file << share.first << "|" << share.second << "\n"; // Write each share to the file
+                }
+                file.close();
+                std::cout << "Shares written to: " << outputDir + "/Shares_" + selectItem.query_type + ".txt" << std::endl;
+            } else {
+                std::cerr << "Error opening output file." << std::endl;
             }
         }
     } catch (const std::exception& e) {

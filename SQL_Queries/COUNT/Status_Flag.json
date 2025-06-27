@@ -1,9 +1,9 @@
 {
     "select": [
         {
-            "query_type": "MIN",
-            "attribute": "EXTENDEDPRICE",
-            "variable": "min_extended_price"
+            "query_type": "COUNT",
+            "attribute": "LINESTATUS",
+            "variable": "linestatus_count"
         }
     ],
     "filters": [
@@ -12,11 +12,11 @@
             "condition": "RAIL"
         },
         {
-            "whereClause": "AND"
+            "whereClause": "OR"
         },
         {
             "attribute": "LINESTATUS",
-            "condition": "O"
+            "condition": "F"
         }
     ]
 }

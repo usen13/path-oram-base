@@ -1,18 +1,18 @@
 {
     "select": [
         {
-            "query_type": "MIN",
-            "attribute": "EXTENDEDPRICE",
-            "variable": "min_extended_price"
+            "query_type": "AVG",
+            "attribute": "QUANTITY",
+            "variable": "avg_quanity"
         }
     ],
     "filters": [
         {
             "attribute": "SHIPMODE",
-            "condition": "RAIL"
+            "condition": "AIR"
         },
         {
-            "whereClause": "AND"
+            "whereClause": "OR"
         },
         {
             "attribute": "LINESTATUS",

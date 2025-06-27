@@ -1,0 +1,3 @@
+SELECT COUNT(LINESTATUS) AS linestatus_count
+FROM lineitem
+WHERE SHIPMODE = 'RAIL' OR LINESTATUS = 'F';

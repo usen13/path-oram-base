@@ -2,21 +2,21 @@
     "select": [
         {
             "query_type": "MIN",
-            "attribute": "EXTENDEDPRICE",
-            "variable": "min_extended_price"
+            "attribute": "TAX",
+            "variable": "min_tax"
         }
     ],
     "filters": [
         {
             "attribute": "SHIPMODE",
-            "condition": "RAIL"
+            "condition": "TRUCK"
         },
         {
             "whereClause": "AND"
         },
         {
             "attribute": "LINESTATUS",
-            "condition": "O"
+            "condition": "F"
         }
     ]
 }

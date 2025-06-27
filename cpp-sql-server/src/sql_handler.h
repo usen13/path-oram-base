@@ -12,16 +12,7 @@ public:
     SQLHandler();
     ~SQLHandler();
 
-    std::variant<int64_t, double> executeAggregationQuery(const std::string& query);
-
-    // Convert SQL queries to a format suitable for ORAM operations
-    int64_t convertCountORAMQuery(const std::string& query);
-    int64_t convertSumORAMQuery(const std::string& query);
-    int64_t convertMinORAMQuery(const std::string& query);
-    int64_t convertMaxORAMQuery(const std::string& query);
-    double convertAvgORAMQuery(const std::string& query);
     std::vector<std::pair<int64_t, int64_t>> shamirSecretSharing(int64_t& secret, int n, int k);
-    std::vector<std::vector<int64_t>> getResults() const;
 
     // Load query info from JSON file
     void loadQueryFromJson(const std::string& jsonFile);
@@ -37,6 +28,7 @@ public:
     void setAttributeSecrets(const std::string& secrets);
     void setConditionSecrets(const int64_t& secrets);
     void setWhereClauses(const std::string& clauses);
+    AtrributeID attributeStringToEnum(const std::string& attr) ;
 
 private:
 
