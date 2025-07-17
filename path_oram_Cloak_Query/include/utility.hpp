@@ -58,15 +58,15 @@ namespace CloakQueryPathORAM
 	 * @param ivLast the end() iterator of initialization vector (better be randomly generated, must be of size of the AES block, 16 bytes)
 	 * @param inputFirst the begin() iterator of the plaintext or ciphertext material, without IV, must be the multiple of AES block size (16 bytes)
 	 * @param inputLast the end() iterator of the plaintext or ciphertext material, without IV, must be the multiple of AES block size (16 bytes)
-	 * @param the vector to put the ciphertext or plaintex material, the result of the encryption operation
+	 * @param output vector to put the ciphertext or plaintex material, the result of the encryption operation
 	 * @param mode ENCRYPTION or DECRYPTION
 	 */
 	void encrypt(
 		const bytes::const_iterator keyFirst,
 		const bytes::const_iterator keyLast,
-		const bytes::const_iterator ivFist,
+		const bytes::const_iterator ivFirst,
 		const bytes::const_iterator ivLast,
-		const bytes::const_iterator inputFist,
+		const bytes::const_iterator inputFirst,
 		const bytes::const_iterator inputLast,
 		bytes &output,
 		const EncryptionMode mode);

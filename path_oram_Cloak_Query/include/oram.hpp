@@ -149,6 +149,7 @@ namespace CloakQueryPathORAM
 		friend class ORAMTest_MultipleGetNoDuplicates_Test;
 		friend class ORAMBigTest;
 		friend class ORAMTestSSS;
+		friend class ORAMTestSQL;
 
 		public:
 		/**

@@ -1,5 +1,6 @@
 #include "shamir_parser.h"
 #include <filesystem>
+#include <future>
 
 std::vector<LineItem> ShamirParser::parseLineItemFile(const std::string& filename) {
     std::vector<LineItem> lineItems;
@@ -120,9 +121,12 @@ double ShamirParser::reconstructSecretFloat(const std::vector<std::pair<int64_t,
 // Reconstruction (using Lagrange interpolation)
 int64_t ShamirParser::reconstructSecret(const std::vector<std::pair<int64_t, int64_t>>& shares, int k) {
     double secret = 0;
-    // Size of double is 64 bits, so it can store 15 decimal digits
-    // Size of int64_t is 64 bits, so it can store 18 decimal digits
-
+    // Shares are pairs of (x, y) where x is the share index and y is the share value
+    // k is the minimum number of shares needed to reconstruct the secret
+    // Lagrange interpolation formula: P(x) = Σ y_i * l_i(x)
+    // where l_i(x) = Π (x - x_j) / (x_i - x_j) for j ≠ i
+    // P(x) is the polynomial that passes through the points (x_i, y_i)
+    // We can reconstruct the secret by evaluating the polynomial at x = 0
     for (int i = 0; i < k; ++i) {
         double lagrange_coeff = 1.0;
 
@@ -312,11 +316,28 @@ int main(int argc, char** argv) {
     if (option == "encrypt") {
         auto start = std::chrono::high_resolution_clock::now(); // Start timing
         auto lineItems = parser.parseLineItemFile(filename);
+        std::cout << "Line item size:" << lineItems.size() << std::endl;
 
         for (size_t i = 0; i < lineItems.size(); ++i) {
             auto allShares = parser.shamirSecretSharingAllAttributes(lineItems[i], 6, 3);
             parser.saveAllShares(allShares);
         }
+        
+        // Much quicker way to save shares using multithreading
+        // size_t max_threads = std::thread::hardware_concurrency();
+        // if (max_threads == 0) max_threads = 4; // fallback
+        // std::vector<std::future<void>> futures;
+        // for (size_t i = 0; i < lineItems.size(); ++i) {
+        //     if (futures.size() >= max_threads) {
+        //         futures.front().get();
+        //         futures.erase(futures.begin());
+        //     }
+        //     futures.push_back(std::async(std::launch::async, [&parser, &lineItems, i]() {
+        //         auto allShares = parser.shamirSecretSharingAllAttributes(lineItems[i], 6, 3);
+        //         parser.saveAllShares(allShares);
+        //     }));
+        // }
+        // for (auto& f : futures) f.get();
 
         auto end = std::chrono::high_resolution_clock::now(); // End timing
         std::chrono::duration<double> elapsed = end - start;

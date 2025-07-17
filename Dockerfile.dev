@@ -6,13 +6,13 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Installing build tools and dependencies
 RUN apt-get update && \
-    apt-get install -y build-essential cmake git libgtest-dev libgmp-dev libgmpxx4ldbl libsodium-dev && \
+    apt-get install -y build-essential cmake git libgtest-dev libgmock-dev libsodium-dev libboost-all-dev libssl-dev && \
     cd /usr/src/gtest && cmake . && make && cp lib/*.a /usr/lib && \
     rm -rf /var/lib/apt/lists/*
 
-WORKDIR /workspace
+WORKDIR /workspace/cloak_query
 
-# Cloning the path-oram-base repository
+# Cloning the path-oram-base repository if needed
 RUN git clone https://github.com/usen13/path-oram-base.git .
 
 # ...existing code...

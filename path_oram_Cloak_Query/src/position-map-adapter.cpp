@@ -24,6 +24,7 @@ namespace CloakQueryPathORAM
 
 	number InMemoryPositionMapAdapter::get(const number block) const
 	{
+		//std::cout<< "Getting blockID in position map adapter: " << block << std::endl;
 		checkCapacity(block);
 
 		return map[block];
@@ -53,6 +54,7 @@ namespace CloakQueryPathORAM
 
 	void InMemoryPositionMapAdapter::loadFromFile(const string filename)
 	{
+		std::cout<< "Position map initialized from file: " << filename << std::endl;
 		fstream file;
 
 		file.open(filename, fstream::in | fstream::binary);

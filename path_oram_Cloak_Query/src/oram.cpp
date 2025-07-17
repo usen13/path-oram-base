@@ -76,6 +76,7 @@ namespace CloakQueryPathORAM
 
 	void ORAM::get(const number block, bytes &response)
 	{
+		std::cout << "Getting data for blockID: " << block << std::endl;
 		bytes data;
 		access(true, block, data, response);
 		syncCache();
@@ -181,7 +182,7 @@ namespace CloakQueryPathORAM
 
 	void ORAM::access(const bool read, const number block, const bytes &data, bytes &response)
 	{
-		//std::cout << "Accessing and remapping block: " << block << std::endl;
+		std::cout << "Accessing and remapping block: " << block << std::endl;
 		// step 1 from paper: remap block
 		const auto previousPosition = map->get(block);
 		//auto start = std::chrono::high_resolution_clock::now();
@@ -331,6 +332,11 @@ namespace CloakQueryPathORAM
 			for (number i = 0; i < currentStash.size(); i++)
 			{
 				const auto &entry	 = currentStash[i];
+				if (entry.first == ULONG_MAX || entry.second.size() != dataSize)
+				{
+					// skip empty blocks or blocks with wrong size
+					continue;
+				}
 				const auto entryLeaf = map->get(entry.first);
 				// see if this block from stash fits in this bucket
 				if (canInclude(entryLeaf, leaf, level))

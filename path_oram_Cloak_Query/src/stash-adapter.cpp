@@ -43,15 +43,43 @@ namespace CloakQueryPathORAM
 	void InMemoryStashAdapter::add(const number block, const bytes &data)
 	{
 		checkOverflow(block);
-
-		stash.insert({block, data});
+		// Skip or throw on invalid block IDs
+		if (block == ULONG_MAX || block > 1e12) {
+			std::cerr << "[Stash add] Skipping suspicious block ID: " << block << std::endl;
+			return; // Or throw Exception if you want to be strict
+		}
+		// Pad or truncate to match the defined block size
+		size_t blockSize = 0;
+		if (!stash.empty()) {
+			blockSize = stash.begin()->second.size();
+		} else {
+			blockSize = data.size(); // Use first block's size as reference
+		}
+		bytes adjustedData = data;
+		if (data.size() < blockSize) {
+			adjustedData.resize(blockSize, 0); // Pad with zeros
+		} else if (data.size() > blockSize) {
+			adjustedData.resize(blockSize); // Truncate
+		}
+		stash.insert({block, adjustedData});
 	}
 
 	void InMemoryStashAdapter::update(const number block, const bytes &data)
 	{
 		checkOverflow(block);
-
-		stash[block] = data;
+		size_t blockSize = 0;
+		if (!stash.empty()) {
+			blockSize = stash.begin()->second.size();
+		} else {
+			blockSize = data.size();
+		}
+		bytes adjustedData = data;
+		if (data.size() < blockSize) {
+			adjustedData.resize(blockSize, 0);
+		} else if (data.size() > blockSize) {
+			adjustedData.resize(blockSize);
+		}
+		stash[block] = adjustedData;
 	}
 
 	void InMemoryStashAdapter::get(const number block, bytes &response) const
@@ -101,21 +129,36 @@ namespace CloakQueryPathORAM
 
 		if (stash.size() > 0)
 		{
-			auto blockSize	= stash.begin()->second.size();
+			auto blockSize = stash.begin()->second.size();
 			auto recordSize = sizeof(number) + blockSize;
-			unsigned char buffer[stash.size() * recordSize];
+			size_t totalSize = stash.size() * recordSize;
+			std::vector<unsigned char> buffer(totalSize);
+
+			// Sanity check: ensure all blocks are the same size
+			for (const auto& record : stash) {
+				if (record.second.size() != blockSize) {
+					file.close();
+					throw Exception(boost::format("Block size mismatch in stash: expected %1%, got %2% for block %3%") % blockSize % record.second.size() % record.first);
+				}
+			}
 
 			auto i = 0;
 			for (auto &&record : stash)
 			{
 				number numberBuffer[1] = {record.first};
-				copy((unsigned char *)numberBuffer, (unsigned char *)numberBuffer + sizeof(number), buffer + recordSize * i);
-				copy(record.second.begin(), record.second.begin() + record.second.size(), buffer + recordSize * i + sizeof(number));
+				// Buffer overflow check
+				size_t offset = recordSize * i;
+				if (offset + recordSize > buffer.size()) {
+					file.close();
+					throw Exception("Buffer overflow detected during stash serialization");
+				}
+				copy((unsigned char *)numberBuffer, (unsigned char *)numberBuffer + sizeof(number), buffer.begin() + offset);
+				copy(record.second.begin(), record.second.end(), buffer.begin() + offset + sizeof(number));
 				i++;
 			}
 
 			file.seekg(0, file.beg);
-			file.write((const char *)buffer, stash.size() * recordSize);
+			file.write((const char *)buffer.data(), stash.size() * recordSize);
 			file.close();
 		}
 	}
@@ -135,20 +178,34 @@ namespace CloakQueryPathORAM
 
 		if (size > 0)
 		{
-			unsigned char buffer[size];
-			file.read((char *)buffer, size);
+			const auto recordSize = sizeof(number) + blockSize;
+			if (size % recordSize != 0) {
+				std::cerr << "[WARNING] Stash file size " << size << " is not a multiple of record size " << recordSize << ". File may be corrupted. Skipping incomplete record." << std::endl;
+			}
+			std::vector<unsigned char> buffer(size);
+			file.read((char *)buffer.data(), size);
 			file.close();
 
-			auto recordSize = sizeof(number) + blockSize;
-			for (int i = 0; i < size; i += recordSize)
+			const int numRecords = size / recordSize;
+			for (int i = 0; i < numRecords; i++)
 			{
+				int offset = i * recordSize;
 				unsigned char numberBuffer[sizeof(number)];
-				copy(buffer + i, buffer + i + sizeof(number), numberBuffer);
+				copy(buffer.begin() + offset, buffer.begin() + offset + sizeof(number), numberBuffer);
 				number block = ((number *)numberBuffer)[0];
+
+				// Print/log block ID for debugging
+				std::cout << "[Stash load] Block ID: " << block << std::endl;
+
+				// Optionally, skip obviously invalid block IDs (e.g., > 1e12 or 0xFFFFFFFFFFFF)
+				if (block == ULONG_MAX || block > 1e12) {
+					std::cerr << "[WARNING] Skipping suspicious block ID: " << block << std::endl;
+					continue;
+				}
 
 				bytes data;
 				data.resize(blockSize);
-				copy(buffer + i + sizeof(number), buffer + i + sizeof(number) + blockSize, data.begin());
+				copy(buffer.begin() + offset + sizeof(number), buffer.begin() + offset + sizeof(number) + blockSize, data.begin());
 
 				stash.insert({block, data});
 			}

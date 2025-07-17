@@ -8,7 +8,7 @@ ODIR=obj
 LDIR=lib
 BDIR=bin
 
-CXXFLAGS= -I/usr/include/gtest -I/usr/include/gtest -I/usr/include -pthread
+CXXFLAGS= -I/usr/include/gtest -I/usr/include/gtest  -pthread	-g
 
 LDFLAGS=-L $(LDIR) -L /usr/include/openssl -lgtest -lgtest_main -pthread -lsodium -g
 
@@ -57,6 +57,10 @@ INTEGRATIONBIN = $(addprefix $(BDIR)/test-, $(INTEGRATION))
 
 TESTSSS = $(BDIR)/test-sss
 
+TESTSQL = $(BDIR)/test-sql
+
+TESTSER3 = $(BDIR)/test-ser3
+
 ENTRYPOINTCC = $(CC) -o $@ $^ $(CPPFLAGS) $(INCLUDES) $(LDLIBS) $(LDTESTLIBS) $(LDFLAGS)
 
 # flags-setting commands
@@ -97,6 +101,30 @@ clean-test-sss:
 
 debug-test-sss: CPPFLAGS += -g -DTESTING	-fdebug-prefix-map=$(PWD)=.
 debug-test-sss: $(TESTSSS)
+
+$(TESTSQL): $(OBJ) $(TDIR)/test-sql.cpp
+	$(ENTRYPOINTCC)
+
+run-test-sql: $(TESTSQL)
+	$(TESTSQL)
+
+clean-test-sql:
+	$(RM) $(TESTSQL)
+
+debug-test-sql: CPPFLAGS += -g -DTESTING	-fdebug-prefix-map=$(PWD)=.
+debug-test-sql: $(TESTSQL)
+
+$(TESTSER3): $(OBJ) $(TDIR)/test-ser3.cpp
+	$(ENTRYPOINTCC)
+
+run-test-ser3: $(TESTSER3)
+	$(TESTSER3)
+
+clean-test-ser3:
+	$(RM) $(TESTSER3)
+
+debug-test-ser3: CPPFLAGS += -g -DTESTING	-fdebug-prefix-map=$(PWD)=.
+debug-test-ser3: $(TESTSER3)
 
 shared-debug: CPPFLAGS += -g -DDEBUG
 shared-debug: shared

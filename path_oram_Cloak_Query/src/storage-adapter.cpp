@@ -282,11 +282,9 @@ namespace CloakQueryPathORAM
 			bucket bucketData(Z);
 			for (auto j = 0uLL; j < Z; j++)
 			{
-				bucketData[j] = {ULONG_MAX, bytes()};
+				bucketData[j] = {ULONG_MAX, bytes(userBlockSize, 0)}; // Fill with zeros of correct size
 			}
-			//std::cout << "Number of blocks per bucket: " << bucketData.size() << std::endl;
-
-			 requests.push_back({i, bucketData});
+			requests.push_back({i, bucketData});
 		}
 		std::cout << "Total requests: " << requests.size() << std::endl;
 		std::cout << "Total capacity: " << capacity << std::endl;

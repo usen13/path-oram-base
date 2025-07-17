@@ -4,8 +4,8 @@
 #include <string>
 #include <vector>
 #include <variant>
-#include "../Shamir_Parser/shamir_parser.h"
-#include "utils.h" // Include for SelectItem/FilterItem and parseQueryJson
+#include "../../Shamir_Parser/shamir_parser.h"
+#include "sql_utils.h" // Include for SelectItem/FilterItem and parseQueryJson
 
 class SQLHandler {
 public:
@@ -13,6 +13,7 @@ public:
     ~SQLHandler();
 
     std::vector<std::pair<int64_t, int64_t>> shamirSecretSharing(int64_t& secret, int n, int k);
+    int64_t stringToInt(const std::string& str);
 
     // Load query info from JSON file
     void loadQueryFromJson(const std::string& jsonFile);

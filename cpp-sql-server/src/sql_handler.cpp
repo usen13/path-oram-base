@@ -3,7 +3,6 @@
 #include <stdexcept>
 #include <algorithm>
 #include <filesystem>
-#include "utils.h"
 
 std::vector<std::pair<int64_t, int64_t>> SQLHandler::shamirSecretSharing(int64_t& secret, int n, int k) {
     std::vector<int64_t> coefficients(k - 1);
@@ -35,7 +34,7 @@ std::vector<std::pair<int64_t, int64_t>> SQLHandler::shamirSecretSharing(int64_t
 }
 
 // Function to convert string to integer (simple example using ASCII values)
-int64_t stringToInt(const std::string& str) {
+int64_t SQLHandler::stringToInt(const std::string& str) {
     int64_t result = 0;
     for (char c : str) {
         result = result * 256 + static_cast<int>(c);
@@ -77,73 +76,4 @@ AtrributeID SQLHandler::attributeStringToEnum(const std::string& attr) {
         return it->second;
     }
     throw std::invalid_argument("Unknown attribute: " + attr);
-}
-
-int main () {
-    // Intialize SQLHandler
-    SQLHandler sqlHandler;
-    //std::unique_ptr<SQLHandler> sqlHandler = std::make_unique<SQLHandler>;
-    namespace fs = std::filesystem;
-    std::vector<int64_t> conditionals;
-    std::string outputDir = "../Shamir_Search_Results";
-    std::filesystem::create_directory(outputDir);
-    std::vector<std::pair<int64_t, int64_t>> secretShares;
-    std::pair<Utils::SelectItem, std::vector<Utils::FilterItem>> combinedItems;
-
-
-    // Create a vector to hold all the combined items
-    std::vector<std::pair<Utils::SelectItem, std::vector<Utils::FilterItem>>> allItemsList;
-    try {
-        std::string queriesRoot = "../SQL_Queries";
-        for (const auto& dirEntry : fs::recursive_directory_iterator(queriesRoot)) {
-            if (dirEntry.is_regular_file() && dirEntry.path().extension() == ".json") {
-                std::vector<Utils::SelectItem> selectItems;
-                std::vector<Utils::FilterItem> filterItems;
-                Utils::parseQueryJson(dirEntry.path().string(), selectItems, filterItems, combinedItems);
-
-                std::cout << "Parsed: " << dirEntry.path() << std::endl;
-                allItemsList.emplace_back(combinedItems);
-            }
-        }
-        // Now selectItems and filterItems are populated from the JSON file
-        for (const auto& item : allItemsList) {
-            secretShares.clear(); // Clear secret shares for each item
-            conditionals.clear();
-            const auto& selectItem = item.first;
-            std::cout << "Select: " << selectItem.query_type << ", " << selectItem.attribute << ", " << selectItem.variable << std::endl;
-            for (const auto& item : item.second) {
-                std::cout << "Filter: " << item.attribute << " = " << item.condition << ", whereClause: " << item.whereClause << std::endl;
-                if (!item.attribute.empty()) {
-                    sqlHandler.setAttributeSecrets(item.attribute);
-                }
-                if (!item.condition.empty()) {
-                    sqlHandler.setConditionSecrets(static_cast<int64_t>(stringToInt(item.condition))); // Casting to ASCII value to match secret sharing
-                    conditionals.emplace_back(static_cast<int64_t>(stringToInt(item.condition))); // Used for persistance by saving in a file.
-                }
-            }
-            // Calculate the secret shares for each conditional value
-            for (auto cond : conditionals) {
-                std::cout << "Condition secret: " << cond << std::endl;
-                auto shares = sqlHandler.shamirSecretSharing(cond, 6, 3);
-                secretShares.insert(secretShares.end(), shares.begin(), shares.end());
-            }
-
-            std::cout << "Count query for attribute: " << selectItem.attribute << std::endl;
-
-            // Write results to a text file for parsing later
-            std::ofstream file (outputDir + "/Shares_" + selectItem.query_type + ".txt", std::ios::app);
-            if (file.is_open()) {
-                for (const auto& share : secretShares) {
-                    file << share.first << "|" << share.second << "\n"; // Write each share to the file
-                }
-                file.close();
-                std::cout << "Shares written to: " << outputDir + "/Shares_" + selectItem.query_type + ".txt" << std::endl;
-            } else {
-                std::cerr << "Error opening output file." << std::endl;
-            }
-        }
-    } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
-    }
-    return 0;
 }

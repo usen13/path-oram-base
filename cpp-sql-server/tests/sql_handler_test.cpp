@@ -1,46 +1,83 @@
-#include "sql_handler.h"
+#include "../src/sql_handler.h"
 #include <gtest/gtest.h>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <vector>
+#include <string>
+//#define TEST_SEED 0x13
 
-class SQLHandlerTest : public ::testing::Test {
-protected:
+// Copy the main logic into a function
+int run_sql_handler_main_logic() {
     SQLHandler sqlHandler;
+    namespace fs = std::filesystem;
+    std::vector<int64_t> conditionals;
+    std::string outputDir = "../Shamir_Search_Results";
+    std::filesystem::create_directory(outputDir);
+    std::vector<std::pair<int64_t, int64_t>> secretShares;
+    std::pair<Utils::SelectItem, std::vector<Utils::FilterItem>> combinedItems;
+    std::vector<std::pair<Utils::SelectItem, std::vector<Utils::FilterItem>>> allItemsList;
 
-    void SetUp() override {
-        // Setup code if needed
+    try {
+        std::string queriesRoot = "../SQL_Queries";
+        for (const auto& dirEntry : fs::recursive_directory_iterator(queriesRoot)) {
+            if (dirEntry.is_regular_file() && dirEntry.path().extension() == ".json") {
+                std::vector<Utils::SelectItem> selectItems;
+                std::vector<Utils::FilterItem> filterItems;
+                Utils::parseQueryJson(dirEntry.path().string(), selectItems, filterItems, combinedItems);
+
+                //std::cout << "Parsed: " << dirEntry.path() << std::endl;
+                allItemsList.emplace_back(combinedItems);
+            }
+        }
+        for (const auto& item : allItemsList) {
+            secretShares.clear();
+            conditionals.clear();
+            const auto& selectItem = item.first;
+            //std::cout << "Select: " << selectItem.query_type << ", " << selectItem.attribute << ", " << selectItem.variable << std::endl;
+            for (const auto& filter : item.second) {
+                //std::cout << "Filter: " << filter.attribute << " = " << filter.condition << ", whereClause: " << filter.whereClause << std::endl;
+                if (!filter.attribute.empty()) {
+                    sqlHandler.setAttributeSecrets(filter.attribute);
+                }
+                if (!filter.condition.empty()) {
+                    sqlHandler.setConditionSecrets(static_cast<int64_t>(sqlHandler.stringToInt(filter.condition)));
+                    conditionals.emplace_back(static_cast<int64_t>(sqlHandler.stringToInt(filter.condition)));
+                }
+            }
+            for (auto cond : conditionals) {
+                //std::cout << "Condition secret: " << cond << std::endl;
+                auto shares = sqlHandler.shamirSecretSharing(cond, 6, 3);
+                secretShares.insert(secretShares.end(), shares.begin(), shares.end());
+            }
+            //std::cout << "Count query for attribute: " << selectItem.attribute << std::endl;
+            std::ofstream file(outputDir + "/Shares_" + selectItem.query_type + ".txt", std::ios::app);
+            if (file.is_open()) {
+                for (const auto& share : secretShares) {
+                    file << share.first << "|" << share.second << "\n";
+                }
+                file.close();
+            } else {
+                std::cerr << "Error opening output file." << std::endl;
+                return 1;
+            }
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return 1;
     }
-
-    void TearDown() override {
-        // Cleanup code if needed
-    }
-};
-
-TEST_F(SQLHandlerTest, ExecuteValidQuery) {
-    std::string query = "SELECT * FROM users;";
-    ASSERT_NO_THROW(sqlHandler.executeQuery(query));
-    auto results = sqlHandler.getResults();
-    ASSERT_FALSE(results.empty());
+    return 0;
 }
 
-TEST_F(SQLHandlerTest, ExecuteInvalidQuery) {
-    std::string query = "INVALID SQL QUERY";
-    ASSERT_THROW(sqlHandler.executeQuery(query), std::runtime_error);
+// Now add a test that calls this function
+TEST(SQLHandlerIntegrationTest, MainLogicRunsWithoutError) {
+    ASSERT_EQ(run_sql_handler_main_logic(), 0);
 }
 
-TEST_F(SQLHandlerTest, ExecuteInsertQuery) {
-    std::string query = "INSERT INTO users (name, age) VALUES ('Alice', 30);";
-    ASSERT_NO_THROW(sqlHandler.executeQuery(query));
-    // Verify the insertion
-    std::string selectQuery = "SELECT * FROM users WHERE name = 'Alice';";
-    ASSERT_NO_THROW(sqlHandler.executeQuery(selectQuery));
-    auto results = sqlHandler.getResults();
-    ASSERT_EQ(results.size(), 1);
-    ASSERT_EQ(results[0]["name"], "Alice");
-    ASSERT_EQ(results[0]["age"], 30);
-}
+int main(int argc, char **argv)
+{
+    //srand(TEST_SEED);
 
-TEST_F(SQLHandlerTest, GetResultsAfterExecution) {
-    std::string query = "SELECT * FROM users;";
-    sqlHandler.executeQuery(query);
-    auto results = sqlHandler.getResults();
-    ASSERT_FALSE(results.empty());
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 }
