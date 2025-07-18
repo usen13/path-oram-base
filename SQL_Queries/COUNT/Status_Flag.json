@@ -1,22 +1,38 @@
 {
-    "select": [
-        {
-            "query_type": "COUNT",
-            "attribute": "LINESTATUS",
-            "variable": "linestatus_count"
-        }
-    ],
     "filters": [
         {
             "attribute": "SHIPMODE",
-            "condition": "RAIL"
+            "condition": "RAIL",
+            "shareID": {
+                "id_0": 1380010395,
+                "id_1": 1380010550,
+                "id_2": 1380010781,
+                "id_3": 1380011088,
+                "id_4": 1380011471,
+                "id_5": 1380011930
+            }
         },
         {
             "whereClause": "OR"
         },
         {
             "attribute": "LINESTATUS",
-            "condition": "F"
+            "condition": "F",
+            "shareID": {
+                "id_0": 201,
+                "id_1": 484,
+                "id_2": 919,
+                "id_3": 1506,
+                "id_4": 2245,
+                "id_5": 3136
+            }
+        }
+    ],
+    "select": [
+        {
+            "attribute": "LINESTATUS",
+            "query_type": "COUNT",
+            "variable": "linestatus_count"
         }
     ]
 }

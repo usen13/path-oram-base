@@ -1,22 +1,38 @@
 {
-    "select": [
-        {
-            "query_type": "AVG",
-            "attribute": "DISCOUNT",
-            "variable": "avg_discount"
-        }
-    ],
     "filters": [
         {
             "attribute": "SHIPMODE",
-            "condition": "RAIL"
+            "condition": "RAIL",
+            "shareID": {
+                "id_0": 1380010395,
+                "id_1": 1380010550,
+                "id_2": 1380010781,
+                "id_3": 1380011088,
+                "id_4": 1380011471,
+                "id_5": 1380011930
+            }
         },
         {
             "whereClause": "AND"
         },
         {
             "attribute": "LINESTATUS",
-            "condition": "O"
+            "condition": "O",
+            "shareID": {
+                "id_0": 143,
+                "id_1": 293,
+                "id_2": 529,
+                "id_3": 851,
+                "id_4": 1259,
+                "id_5": 1753
+            }
+        }
+    ],
+    "select": [
+        {
+            "attribute": "DISCOUNT",
+            "query_type": "AVG",
+            "variable": "avg_discount"
         }
     ]
 }

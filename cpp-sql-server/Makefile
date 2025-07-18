@@ -13,10 +13,10 @@ SQLHANDLER_TEST_BIN=$(BDIR)/test-sql_handler
 $(SQLHANDLER_TEST_BIN): $(OBJS) $(SQLHANDLER_TEST_SRC)
 	$(CXX)	-o $@ $^	$(CXXFLAGS)	$(INCLUDES)	$(LDLIBS)	$(LDFLAGS)	$(GTEST_LIBS)
 
-run-sql_handler_test: $(SQLHANDLER_TEST_BIN)
+sql_handler_test: $(SQLHANDLER_TEST_BIN)
 	$(SQLHANDLER_TEST_BIN)
 
-.PHONY: run-sql_handler_test clean-sql_handler_test
+.PHONY: sql_handler_test clean-sql_handler_test
 .PHONY: all clean test debug
 
 %.o: %.cpp
@@ -32,6 +32,7 @@ clean:
 	rm -f $(SRC_DIR)/*.o $(TARGET)
 	@if [ -f tests/Makefile ]; then $(MAKE) -C tests clean; fi
 	rm -rf ../Shamir_Search_Results
+	find ../SQL_Queries -type f -name '*.json' -exec rm -f {} +
 	
 clean-sql_handler_test:
 	$(RM)	$(SQLHANDLER_TEST_BIN)

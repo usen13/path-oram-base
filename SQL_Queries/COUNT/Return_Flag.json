@@ -1,22 +1,38 @@
 {
-    "select": [
-        {
-            "query_type": "COUNT",
-            "attribute": "RETURNFLAG",
-            "variable": "return_count"
-        }
-    ],
     "filters": [
         {
             "attribute": "SHIPMODE",
-            "condition": "AIR"
+            "condition": "AIR",
+            "shareID": {
+                "id_0": 4278786,
+                "id_1": 4279116,
+                "id_2": 4279600,
+                "id_3": 4280238,
+                "id_4": 4281030,
+                "id_5": 4281976
+            }
         },
         {
             "whereClause": "AND"
         },
         {
             "attribute": "LINESTATUS",
-            "condition": "F"
+            "condition": "F",
+            "shareID": {
+                "id_0": 201,
+                "id_1": 484,
+                "id_2": 919,
+                "id_3": 1506,
+                "id_4": 2245,
+                "id_5": 3136
+            }
+        }
+    ],
+    "select": [
+        {
+            "attribute": "RETURNFLAG",
+            "query_type": "COUNT",
+            "variable": "return_count"
         }
     ]
 }

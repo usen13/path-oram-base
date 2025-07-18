@@ -69,9 +69,83 @@ int run_sql_handler_main_logic() {
     return 0;
 }
 
+int run_sql_appender_logic() {
+    SQLHandler sqlHandler;
+    namespace fs = std::filesystem;
+    std::string queriesRoot = "../SQL_Queries";
+
+    try {
+        for (const auto& dirEntry : fs::recursive_directory_iterator(queriesRoot)) {
+            if (dirEntry.is_regular_file() && dirEntry.path().extension() == ".json") {
+                // Parse the JSON file
+                std::ifstream inFile(dirEntry.path());
+                nlohmann::json j;
+                inFile >> j;
+                inFile.close();
+
+                // Prepare attributeShares for this file
+                std::map<std::string, std::vector<std::pair<int64_t, int64_t>>> attributeShares;
+
+                // Use parseQueryJson to get filterItems
+                std::vector<Utils::SelectItem> selectItems;
+                std::vector<Utils::FilterItem> filterItems;
+                std::pair<Utils::SelectItem, std::vector<Utils::FilterItem>> combinedItems;
+                Utils::parseQueryJson(dirEntry.path().string(), selectItems, filterItems, combinedItems);
+
+                // For each filter, generate shares if attribute and condition are present
+                for (const auto& filter : filterItems) {
+                    if (!filter.attribute.empty() && !filter.condition.empty()) {
+                        int64_t cond = static_cast<int64_t>(sqlHandler.stringToInt(filter.condition));
+                        auto shares = sqlHandler.shamirSecretSharing(cond, 6, 3);
+                        attributeShares[filter.attribute] = shares;
+                    }
+                }
+
+                // Update filters in the JSON object
+                for (auto& filter : j["filters"]) {
+                    if (filter.contains("attribute") && filter.contains("condition")) {
+                        std::string attr = filter["attribute"];
+                        if (attributeShares.count(attr)) {
+                            nlohmann::json shareID;
+                            int idx = 0;
+                            for (const auto& share : attributeShares[attr]) {
+                                shareID["id_" + std::to_string(idx)] = share.second;
+                                idx++;
+                            }
+                            filter["shareID"] = shareID;
+                        }
+                    }
+                }
+
+                // Write back to file
+                std::ofstream outFile(dirEntry.path());
+                outFile << j.dump(4);
+                outFile.close();
+
+                // Clear attributeShares for next file
+                attributeShares.clear();
+            }
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return 1;
+    }
+    return 0;
+}
+
+TEST(SQLHandlerIntegrationTest, PythonParserRuns) {
+    int ret = std::system("python3 ../cpp-sql-server/sql_parser.py");
+    ASSERT_EQ(ret, 0); // Check that the script ran successfully
+
+}
 // Now add a test that calls this function
 TEST(SQLHandlerIntegrationTest, MainLogicRunsWithoutError) {
     ASSERT_EQ(run_sql_handler_main_logic(), 0);
+}
+
+// Now add a test that calls this function
+TEST(SQLHandlerIntegrationTest, ShareAppender) {
+    ASSERT_EQ(run_sql_appender_logic(), 0);
 }
 
 int main(int argc, char **argv)

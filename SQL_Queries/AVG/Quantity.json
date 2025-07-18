@@ -1,22 +1,38 @@
 {
-    "select": [
-        {
-            "query_type": "AVG",
-            "attribute": "QUANTITY",
-            "variable": "avg_quanity"
-        }
-    ],
     "filters": [
         {
             "attribute": "SHIPMODE",
-            "condition": "AIR"
+            "condition": "AIR",
+            "shareID": {
+                "id_0": 4278786,
+                "id_1": 4279116,
+                "id_2": 4279600,
+                "id_3": 4280238,
+                "id_4": 4281030,
+                "id_5": 4281976
+            }
         },
         {
             "whereClause": "OR"
         },
         {
             "attribute": "LINESTATUS",
-            "condition": "O"
+            "condition": "O",
+            "shareID": {
+                "id_0": 143,
+                "id_1": 293,
+                "id_2": 529,
+                "id_3": 851,
+                "id_4": 1259,
+                "id_5": 1753
+            }
+        }
+    ],
+    "select": [
+        {
+            "attribute": "QUANTITY",
+            "query_type": "AVG",
+            "variable": "avg_quanity"
         }
     ]
 }

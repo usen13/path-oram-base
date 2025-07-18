@@ -1,22 +1,38 @@
 {
-    "select": [
-        {
-            "query_type": "SUM",
-            "attribute": "EXTENDEDPRICE",
-            "variable": "total_extended_price"
-        }
-    ],
     "filters": [
         {
             "attribute": "SHIPMODE",
-            "condition": "MAIL"
+            "condition": "MAIL",
+            "shareID": {
+                "id_0": 1296124327,
+                "id_1": 1296124500,
+                "id_2": 1296124755,
+                "id_3": 1296125092,
+                "id_4": 1296125511,
+                "id_5": 1296126012
+            }
         },
         {
             "whereClause": "AND"
         },
         {
             "attribute": "LINESTATUS",
-            "condition": "F"
+            "condition": "F",
+            "shareID": {
+                "id_0": 201,
+                "id_1": 484,
+                "id_2": 919,
+                "id_3": 1506,
+                "id_4": 2245,
+                "id_5": 3136
+            }
+        }
+    ],
+    "select": [
+        {
+            "attribute": "EXTENDEDPRICE",
+            "query_type": "SUM",
+            "variable": "total_extended_price"
         }
     ]
 }

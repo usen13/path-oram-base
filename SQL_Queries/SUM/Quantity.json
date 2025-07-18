@@ -1,22 +1,38 @@
 {
-    "select": [
-        {
-            "query_type": "SUM",
-            "attribute": "QUANTITY",
-            "variable": "total_quantity"
-        }
-    ],
     "filters": [
         {
             "attribute": "SHIPMODE",
-            "condition": "SHIP"
+            "condition": "SHIP",
+            "shareID": {
+                "id_0": 1397246404,
+                "id_1": 1397246586,
+                "id_2": 1397246834,
+                "id_3": 1397247148,
+                "id_4": 1397247528,
+                "id_5": 1397247974
+            }
         },
         {
             "whereClause": "AND"
         },
         {
             "attribute": "LINESTATUS",
-            "condition": "F"
+            "condition": "F",
+            "shareID": {
+                "id_0": 201,
+                "id_1": 484,
+                "id_2": 919,
+                "id_3": 1506,
+                "id_4": 2245,
+                "id_5": 3136
+            }
+        }
+    ],
+    "select": [
+        {
+            "attribute": "QUANTITY",
+            "query_type": "SUM",
+            "variable": "total_quantity"
         }
     ]
 }

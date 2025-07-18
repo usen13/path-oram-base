@@ -1,22 +1,38 @@
 {
-    "select": [
-        {
-            "query_type": "MAX",
-            "attribute": "TAX",
-            "variable": "max_tax"
-        }
-    ],
     "filters": [
         {
             "attribute": "SHIPMODE",
-            "condition": "FOB"
+            "condition": "FOB",
+            "shareID": {
+                "id_0": 4607925,
+                "id_1": 4608080,
+                "id_2": 4608275,
+                "id_3": 4608510,
+                "id_4": 4608785,
+                "id_5": 4609100
+            }
         },
         {
             "whereClause": "AND"
         },
         {
             "attribute": "LINESTATUS",
-            "condition": "F"
+            "condition": "F",
+            "shareID": {
+                "id_0": 201,
+                "id_1": 484,
+                "id_2": 919,
+                "id_3": 1506,
+                "id_4": 2245,
+                "id_5": 3136
+            }
+        }
+    ],
+    "select": [
+        {
+            "attribute": "TAX",
+            "query_type": "MAX",
+            "variable": "max_tax"
         }
     ]
 }

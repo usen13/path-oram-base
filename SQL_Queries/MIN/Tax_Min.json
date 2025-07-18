@@ -1,22 +1,38 @@
 {
-    "select": [
-        {
-            "query_type": "MIN",
-            "attribute": "TAX",
-            "variable": "min_tax"
-        }
-    ],
     "filters": [
         {
             "attribute": "SHIPMODE",
-            "condition": "TRUCK"
+            "condition": "TRUCK",
+            "shareID": {
+                "id_0": 362158572449,
+                "id_1": 362158572617,
+                "id_2": 362158572867,
+                "id_3": 362158573199,
+                "id_4": 362158573613,
+                "id_5": 362158574109
+            }
         },
         {
             "whereClause": "AND"
         },
         {
             "attribute": "LINESTATUS",
-            "condition": "F"
+            "condition": "F",
+            "shareID": {
+                "id_0": 201,
+                "id_1": 484,
+                "id_2": 919,
+                "id_3": 1506,
+                "id_4": 2245,
+                "id_5": 3136
+            }
+        }
+    ],
+    "select": [
+        {
+            "attribute": "TAX",
+            "query_type": "MIN",
+            "variable": "min_tax"
         }
     ]
 }
