@@ -6,13 +6,15 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <math.h>
+#include <thread>
 #include "../../cpp-sql-server/src/sql_handler.h"
 #include "../../cpp-sql-server/src/sql_utils.h"
 using json = nlohmann::json;
 
 namespace fs = std::filesystem;
-// Global variable to hold the retrieved shares, ALWAYS reset before populating
 std::vector<std::vector<int64_t>> retrievedShares_global;
+
+// Load secret shares from the first file found in the ../shares directory
 std::vector<std::vector<int64_t>> loadSecretShares(int serverNumber) {
 	std::vector<std::vector<int64_t>> allShares;
 	
@@ -67,7 +69,6 @@ std::unordered_set<CloakQueryPathORAM::number> loadUsedBlockIDs(const std::strin
     }
     return ids;
 }
-
 size_t attributeIndex(const std::string& attribute) {
     // Map attribute names to their index
     static const std::unordered_map<std::string, size_t> attributeMap = {
@@ -91,10 +92,21 @@ size_t attributeIndex(const std::string& attribute) {
     auto it = attributeMap.find(attribute);
     return (it != attributeMap.end()) ? it->second : -1;
 }
+// size_t loadCommonSecretShareSize() {
+//     std::ifstream sizeFile("../backup_sql/common_secret_share_size.txt");
+//     size_t size = 0;
+//     if (sizeFile.is_open()) {
+//         sizeFile >> size;
+//         sizeFile.close();
+//     } else {
+//         throw std::runtime_error("Could not open common_secret_share_size.txt");
+//     }
+//     return size;
+// }
 
 namespace CloakQueryPathORAM
 {
-    class ORAMTestSSS : public ::testing::Test
+    class ORAMTestSQL : public ::testing::Test
 	{
 		public:
 		number LOG_CAPACITY;
@@ -105,30 +117,16 @@ namespace CloakQueryPathORAM
 		std::string where_clause;
 		std::string query_type;
 
-
 		protected:
 		inline static const number Z			= 3; // Number of blocks per bucket
-		// Block size calculation:
-		// 16 attributes * 8 bytes per attribute = 128 bytes
-		// Block size = N * 128 bytes
-		// Considering 1000 tuple entries per block size (N = 1000), we get:
-		// Block size = 1000 * 128 = 128000 bytes = 128 KB
-		// Considering 10 % overhead for serialization, we get:
-		// Block size = 128000 * 1.1 = 140.8 KB
-		// Nearest aligned size for 8 bytes = 140.8 KB
 		inline static const number BLOCK_SIZE	= 140800;
 		inline static const number BATCH_SIZE	= 10; // Number of requests to process at a time
-		//inline static string FILENAME = "storage.bin";
 		inline static bytes KEY; // AES key for encryption operations
-		inline static size_t commonSecretShareSize = 0; // Size of the secret shares, to be set in initialize()
-		// create and std pair for saving the server and blocksize
-		//inline static size_t stashBlockSize = 0;
-
-		//inline static const number CAPACITY = (1 << LOG_CAPACITY); // Total number of blocks in ORAM
+        inline static size_t commonSecretShareSize = 0; // Size of the secret shares, to be set in initialize()
 
 		protected:
 
-		// Change initialize to return all components for each ORAM instance
+        // Change initialize to return all components for each ORAM instance
 		std::tuple<
 			std::shared_ptr<AbsStorageAdapter>,
 			std::shared_ptr<AbsPositionMapAdapter>,
@@ -150,7 +148,7 @@ namespace CloakQueryPathORAM
 			std::cout << "Called in initialize with key size: " << KEY.size() << std::endl;
 			std::cout << "CAPACITY: " << CAPACITY << ", Z: " << Z << ", map size: " << (CAPACITY * Z + Z) << std::endl;
 			// Use the same backupDir as backupGenerator()
-			std::string backupDir = "../backup_sss";
+			std::string backupDir = "../backup_ser3";
 			if (!std::filesystem::exists(backupDir)) {
 				std::filesystem::create_directory(backupDir);
 			}
@@ -181,7 +179,7 @@ namespace CloakQueryPathORAM
 		>
 		initializeFromBackup (size_t secretSharesSize, int serverIndex) {
 			// Store path to the backup directory
-			std::string backupDir = "../backup_sss";
+			std::string backupDir = "../backup_ser3";
 			std::string keyFile = backupDir + "/key_server_" + std::to_string(serverIndex) + ".bin";
 			std::string posmapFile = backupDir + "/position-map_server_" + std::to_string(serverIndex) + ".bin";
 			std::string stashFile = backupDir + "/stash_server_" + std::to_string(serverIndex) + ".bin";
@@ -194,7 +192,7 @@ namespace CloakQueryPathORAM
 
 			// Reconstruct the ORAM instance from the backup files
 			if (!fs::exists(storageFile) || !fs::exists(keyFile) || !fs::exists(posmapFile) || !fs::exists(stashFile)) {
-				std::cerr << "Backup files do not exist. Please run the PutContainerMultipleORAMs test first." << std::endl;
+				std::cerr << "Backup files do not exist. Please run the PutContainerSingleORAM test first." << std::endl;
 				return {};
 			}
 
@@ -202,19 +200,18 @@ namespace CloakQueryPathORAM
 			//std::cout << "Called in initializeFromBackup with key size: " << KEY.size() << std::endl;
 			//std::cout << "CAPACITY: " << CAPACITY << ", Z: " << Z << ", map size: " << (CAPACITY * Z + Z) << std::endl;
 			// Loading storage
-			auto storage = std::make_shared<FileSystemStorageAdapter>(totalBlocks + 10, BLOCK_SIZE, KEY, storageFile, false, Z, 0);
+			auto storage = std::make_shared<FileSystemStorageAdapter>(totalBlocks + 10, BLOCK_SIZE, KEY, storageFile, false, Z);
 			
 			// Loading map
 			auto map = std::make_shared<InMemoryPositionMapAdapter>(totalBlocks * Z + Z);
-			dynamic_pointer_cast<InMemoryPositionMapAdapter>(map)->loadFromFile(posmapFile);	
-			auto inMemMap = std::dynamic_pointer_cast<InMemoryPositionMapAdapter>(map);
-			
+			dynamic_pointer_cast<InMemoryPositionMapAdapter>(map)->loadFromFile(posmapFile);
+
 			// Loading stash
 			// Commented out code below can be used for calculating the block size of the stash
 			// vector<block> stashDump;
 			// stashVar->getAll(stashDump);
 			// auto blockSize = stashDump.size() > 0 ? stashDump[0].second.size() : 0;
-			auto stash = make_shared<InMemoryStashAdapter>(totalBlocks + 10); // Add safety margin
+			auto stash = make_shared<InMemoryStashAdapter>(totalBlocks + 10);
 			if (fs::file_size(stashFile) > 0) {
 				// File is not empty, infer block size as before
 				dynamic_pointer_cast<InMemoryStashAdapter>(stash)->loadFromFile(stashFile, BLOCK_SIZE); // or infer from file
@@ -236,8 +233,8 @@ namespace CloakQueryPathORAM
 
 			return {storage, map, stash, std::move(oram)};
 		}
-
-		// Updated populateStorage to accept storage, stash, map
+        
+        // Updated populateStorage to accept storage, stash, map
 		void populateStorage(const shared_ptr<AbsStorageAdapter>& storageAdapter)
 		{
 			std::cout << "Populating storage with " << CAPACITY << " buckets..." << std::endl;
@@ -252,7 +249,7 @@ namespace CloakQueryPathORAM
 			}
 		}
 
-		// Change backupGenerator to take explicit arguments
+        // Change backupGenerator to take explicit arguments
 		void backupGenerator(
 		 std::shared_ptr<AbsStorageAdapter>& storage,
 		 std::shared_ptr<AbsPositionMapAdapter>& map,
@@ -260,7 +257,7 @@ namespace CloakQueryPathORAM
 		 std::unique_ptr<ORAM>& oram,
 		int serverIndex)
 		{
-			std::string backupDir = "../backup_sss";
+			std::string backupDir = "../backup_ser3";
 			if (!std::filesystem::exists(backupDir)) {
 				std::filesystem::create_directory(backupDir);
 			}
@@ -294,20 +291,21 @@ namespace CloakQueryPathORAM
 			//oram.reset();
 		}
 
-		void callSyncCache(std::unique_ptr<ORAM>& oram) {
+        void callSyncCache(std::unique_ptr<ORAM>& oram) {
 			oram->syncCache();
 		}
 
-	};
+    };
 
-	TEST_F(ORAMTestSSS, PutContainerServerORAM2)
+
+    TEST_F(ORAMTestSQL, PutContainerServerORAM3)
 	{
 		using namespace std::chrono;
 		auto start = std::chrono::high_resolution_clock::now();
 		
 		// Load and store secret shares for one server
-		std::vector<std::vector<int64_t>> secretShares = loadSecretShares(2);
-		auto [storage, map, stash, oram] = initialize(secretShares.size(), 1);
+		std::vector<std::vector<int64_t>> secretShares = loadSecretShares(5);
+		auto [storage, map, stash, oram] = initialize(secretShares.size(), 4);
 		commonSecretShareSize = secretShares.size(); // Set the common secret share size for all the ORAM instance
 
 		populateStorage(storage); // Called to set block ID's within each bucket across the entire ORAM
@@ -324,11 +322,10 @@ namespace CloakQueryPathORAM
 		while (currentIndex < secretShares.size())
 		{
 			// Get the next chunk of secret shares to store in the ORAM
-			
+			std::cout << "Writing to block ID: " << blockID << std::endl;
 			std::vector<std::vector<int64_t>> secretSharesPerBlock(
 				secretShares.begin() + currentIndex,
 				secretShares.begin() + std::min(currentIndex + 1000, (number)secretShares.size()));
-			std::cout << "Writing to block ID: " << blockID << " with " << secretSharesPerBlock.size() << " shares" << std::endl;
 
 			// Store the chunk in the ORAM
 			ASSERT_NO_THROW(oram->putContainer(blockID, secretSharesPerBlock));
@@ -337,62 +334,153 @@ namespace CloakQueryPathORAM
 			currentIndex += 1000;
 			blockID++;
 		}
-		std::cout << "Total blocks written: " << blockID << std::endl;
+
 		auto end = std::chrono::high_resolution_clock::now();
 	 	auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-	 	std::cout << "Time to populate ORAM for server 2" << ": " << duration_ms << " ms" << std::endl;
+	 	std::cout << "Time to populate ORAM for server 5" << ": " << duration_ms << " ms" << std::endl;
 		// Total number of blocks stored in the ORAM
 		std::cout << "Total number of blocks stored in the ORAM: " << oram->getUsedBlockIDs().size() << std::endl;
 
 		callSyncCache(oram);
-		backupGenerator(storage, map, stash, oram, 1);
+		backupGenerator(storage, map, stash, oram, 4);
 				// Storing the secret share size since it is also used in the backupGenerator
-		std::ofstream sizeFile("../backup_sss/common_secret_share_size.txt");
+		std::ofstream sizeFile("../backup_ser5/common_secret_share_size.txt");
 		if (sizeFile.is_open()) {
 			sizeFile << secretShares.size();
 			sizeFile.close();
 		}
 	}
-	
-	TEST_F(ORAMTestSSS, GetContainerServerORAM2)
-	{
-		// Retrieved secret shares
-		std::vector<std::vector<int64_t>> retrievedSecretShares;
 
-		// Retrieve all the data in the ORAM and store it in a text file
-		auto [storage, map, stash, oram] = initializeFromBackup(commonSecretShareSize, 1); // Initialize from backup for server
-		std::string usedBlockIDsFile = "../backup_sss/used_block_ids_server_1.bin";
+    TEST_F(ORAMTestSQL, GetContainerSingleORAM3)
+    {
+        // Retrieved secret shares
+        std::vector<std::vector<int64_t>> retrievedSecretShares;
+        // Load the common secret share size from the file
+        //size_t commonSecretShareSize = loadCommonSecretShareSize();
+        //std::cout << "Common secret share size: " << commonSecretShareSize << std::endl;
+        // Retrieve all the data in the ORAM and store it in a text file
+        auto [storage, map, stash, oram] = initializeFromBackup(commonSecretShareSize, 2); // Initialize from backup for server 0
+        std::string usedBlockIDsFile = "../backup_ser3/used_block_ids_server_2.bin";
+        
+        // Use getUsedBlockIDs to only iterate over blocks that actually contain data
+        std::unordered_set<number> usedBlockIDs = loadUsedBlockIDs(usedBlockIDsFile);
+        // sort the usedBlockIDs to ensure they are in order
+        std::vector<number> sortedUsedBlockIDs(usedBlockIDs.begin(), usedBlockIDs.end());
+        std::sort(sortedUsedBlockIDs.begin(), sortedUsedBlockIDs.end());
+        std::cout << "Total number of blocks stored in the ORAM: " << usedBlockIDs.size() << std::endl;
+        std::cout << "Total number of blocks stored in the ORAM: while getting: " << sortedUsedBlockIDs.size() << std::endl;
+        // Print the used block IDs
+        for (const auto& id : sortedUsedBlockIDs)
+        {
+            std::cout << "Used block ID: " << id << std::endl;
+        }
+        // Load mac map from file
+        oram->loadMacMap("../backup_ser3/mac_map_server_2.bin");
 
-		// Use getUsedBlockIDs to only iterate over blocks that actually contain data
-		std::unordered_set<number> usedBlockIDs = loadUsedBlockIDs(usedBlockIDsFile);
-		// sort the usedBlockIDs to ensure they are in order
-		std::vector<number> sortedUsedBlockIDs(usedBlockIDs.begin(), usedBlockIDs.end());
-		std::sort(sortedUsedBlockIDs.begin(), sortedUsedBlockIDs.end());
-		std::cout << "Total number of blocks stored in the ORAM: " << usedBlockIDs.size() << std::endl;
-		// Load mac map from file
-		oram->loadMacMap("../backup_sss/mac_map_server_1.bin");
+        for (number id : sortedUsedBlockIDs)
+        {
+            std::cout << "Reading block ID: " << id << std::endl;
+            std::vector<std::vector<int64_t>> blockShares;
+            ASSERT_NO_THROW(blockShares = oram->getContainer(id));
+            retrievedShares_global.insert(retrievedShares_global.end(), blockShares.begin(), blockShares.end());
+        }
+        std::cout << "Total number of blocks stored in the ORAM: while getting: " << usedBlockIDs.size() << std::endl;
+        // Load the original secret shares for verification
+        std::vector<std::vector<int64_t>> secretShares = loadSecretShares(3);
+        ASSERT_EQ(retrievedShares_global.size(), secretShares.size());
+        ASSERT_EQ(secretShares[0].size(), retrievedShares_global[0].size());
+        for (size_t j = 0; j < secretShares.size(); ++j)
+        {
+            ASSERT_EQ(secretShares[j], retrievedShares_global[j]);
+        }
+        std::cout<< "Retrieved all secret shares successfully." << std::endl;
+    }
 
-		for (number id : sortedUsedBlockIDs)
-		{
-			std::cout << "Reading block ID: " << id << std::endl;
-			std::vector<std::vector<int64_t>> blockShares;
-			ASSERT_NO_THROW(blockShares = oram->getContainer(id));
-			std::cout << "Block " << id << " has " << blockShares.size() << " tuples" << std::endl;
-			retrievedShares_global.insert(retrievedShares_global.end(), blockShares.begin(), blockShares.end());
+	TEST_F(ORAMTestSQL, SQLCountORQuery) {
+		std::ifstream ifs("../SQL_Queries/COUNT/Status_Flag.json");
+		json j;
+		ifs >> j;
+		std::vector<std::string> attributeIDs;
+		std::vector<size_t> attr_idx;
+
+		// Extract id_0 from both filters
+		for (const auto& filter : j["filters"]) {
+			if (filter.contains("shareID") && filter["shareID"].contains("id_2")) {
+				filter_ids.push_back(filter["shareID"]["id_2"].get<int64_t>());
+			}
+			if (filter.contains("whereClause")) {
+				where_clause = filter["whereClause"].get<std::string>();
+			}
+			if (filter.contains("attribute")) {
+				// Store the attribute ID for later use
+				attributeIDs.push_back(filter["attribute"].get<std::string>());
+			}
 		}
-		std::cout << "Total number of blocks stored in the ORAM: while getting: " << usedBlockIDs.size() << std::endl;
-		// Load the original secret shares for verification
-		std::vector<std::vector<int64_t>> secretShares = loadSecretShares(2);
-		ASSERT_EQ(retrievedShares_global.size(), secretShares.size());
-		ASSERT_EQ(secretShares[0].size(), retrievedShares_global[0].size());
-		for (size_t j = 0; j < secretShares.size(); ++j)
-		{
-			ASSERT_EQ(secretShares[j], retrievedShares_global[j]);
+		for (const auto& attr : attributeIDs) {
+			attr_idx.emplace_back(attributeIndex(attr)); // Call attributeIndex to ensure it is used
 		}
-		std::cout<< "Retrieved all secret shares successfully." << std::endl;
+
+		// Extract query_type from select
+		if (!j["select"].empty() && j["select"][0].contains("query_type")) {
+			query_type = j["select"][0]["query_type"].get<std::string>();
+		}
+		ASSERT_EQ(filter_ids.size(), 2) << "Expected two filter IDs, but found: " << filter_ids.size();
+		ASSERT_EQ(where_clause, "OR") << "Expected where clause to be 'AND', but found: " << where_clause;
+		// Count tuples containing either filter_id
+		int count = 0;
+		for (const auto& tuple : retrievedShares_global) {
+		bool found0 = (tuple.size() > attr_idx[0]) && (tuple[attr_idx[0]] == filter_ids[0]);
+		bool found1 = (tuple.size() > attr_idx[1]) && (tuple[attr_idx[1]] == filter_ids[1]);
+		if (found0 || found1) {
+			count++;
+			}
+		}
+		std::cout << "Count of tuples containing either filter_id: " << count << std::endl;
 	}
 
-	TEST_F(ORAMTestSSS, SQLSUMORQuery) {
+	TEST_F(ORAMTestSQL, SQLCountANDQuery) {
+		std::ifstream ifs("../SQL_Queries/COUNT/Return_Flag.json");
+		json j;
+		ifs >> j;
+		std::vector<std::string> attributeIDs;
+		std::vector<size_t> attr_idx;
+
+		// Extract id_0 from both filters
+		for (const auto& filter : j["filters"]) {
+			if (filter.contains("shareID") && filter["shareID"].contains("id_2")) {
+				filter_ids.push_back(filter["shareID"]["id_2"].get<int64_t>());
+			}
+			if (filter.contains("whereClause")) {
+				where_clause = filter["whereClause"].get<std::string>();
+			}
+			if (filter.contains("attribute")) {
+				// Store the attribute ID for later use
+				attributeIDs.push_back(filter["attribute"].get<std::string>());
+			}
+		}
+		for (const auto& attr : attributeIDs) {
+			attr_idx.emplace_back(attributeIndex(attr)); // Call attributeIndex to ensure it is used
+		}
+
+		// Extract query_type from select
+		if (!j["select"].empty() && j["select"][0].contains("query_type")) {
+			query_type = j["select"][0]["query_type"].get<std::string>();
+		}
+		ASSERT_EQ(filter_ids.size(), 2) << "Expected two filter IDs, but found: " << filter_ids.size();
+		ASSERT_EQ(where_clause, "AND") << "Expected where clause to be 'AND', but found: " << where_clause;
+		// Count tuples containing either filter_id
+		int count = 0;
+		for (const auto& tuple : retrievedShares_global) {
+		bool found0 = (tuple.size() > attr_idx[0]) && (tuple[attr_idx[0]] == filter_ids[0]);
+		bool found1 = (tuple.size() > attr_idx[1]) && (tuple[attr_idx[1]] == filter_ids[1]);
+			if (found0 && found1) {
+			count++;
+			}
+		}
+	std::cout << "Count of tuples containing both filter_ids: " << count << std::endl;
+	}
+
+	TEST_F(ORAMTestSQL, SQLSUMORQuery) {
 		std::ifstream ifs("../SQL_Queries/SUM/ExtendedPrice.json");
 		json j;
 		ifs >> j;
@@ -400,12 +488,12 @@ namespace CloakQueryPathORAM
 		std::vector<size_t> attr_idx;
 		std::string resultDir = "../Query_Result/SUMOR";
 		std::filesystem::create_directories(resultDir); // Ensure the folder exists
-		std::ofstream outFile(resultDir + "/server_2.txt");
+		std::ofstream outFile(resultDir + "/server_3.txt");
 
 		// Extract id_0 from both filters
 		for (const auto& filter : j["filters"]) {
-			if (filter.contains("shareID") && filter["shareID"].contains("id_1")) {
-				filter_ids.push_back(filter["shareID"]["id_1"].get<int64_t>());
+			if (filter.contains("shareID") && filter["shareID"].contains("id_2")) {
+				filter_ids.push_back(filter["shareID"]["id_2"].get<int64_t>());
 			}
 			if (filter.contains("whereClause")) {
 				where_clause = filter["whereClause"].get<std::string>();
@@ -444,7 +532,7 @@ namespace CloakQueryPathORAM
 		std::cout << "Count of tuples containing either filter_id in SUM Query: " << count << std::endl;
 	}
 
-	TEST_F(ORAMTestSSS, SQLSUMANDQuery) {
+	TEST_F(ORAMTestSQL, SQLSUMANDQuery) {
 		std::ifstream ifs("../SQL_Queries/SUM/Quantity.json");
 		json j;
 		ifs >> j;
@@ -452,12 +540,12 @@ namespace CloakQueryPathORAM
 		std::vector<size_t> attr_idx;
 		std::string resultDir = "../Query_Result/SUMAND";
 		std::filesystem::create_directories(resultDir); // Ensure the folder exists
-		std::ofstream outFile(resultDir + "/server_2.txt");
+		std::ofstream outFile(resultDir + "/server_3.txt");
 
 		// Extract id_0 from both filters
 		for (const auto& filter : j["filters"]) {
-			if (filter.contains("shareID") && filter["shareID"].contains("id_1")) {
-				filter_ids.push_back(filter["shareID"]["id_1"].get<int64_t>());
+			if (filter.contains("shareID") && filter["shareID"].contains("id_2")) {
+				filter_ids.push_back(filter["shareID"]["id_2"].get<int64_t>());
 			}
 			if (filter.contains("whereClause")) {
 				where_clause = filter["whereClause"].get<std::string>();
@@ -496,7 +584,7 @@ namespace CloakQueryPathORAM
 		std::cout << "Count of tuples containing both filter_id in SUM Query: " << count << std::endl;
 	}
 
-	TEST_F(ORAMTestSSS, SQLAVGORQuery) {
+	TEST_F(ORAMTestSQL, SQLAVGORQuery) {
 		std::ifstream ifs("../SQL_Queries/AVG/Quantity.json");
 		json j;
 		ifs >> j;
@@ -504,12 +592,12 @@ namespace CloakQueryPathORAM
 		std::vector<size_t> attr_idx;
 		std::string resultDir = "../Query_Result/AVGOR";
 		std::filesystem::create_directories(resultDir); // Ensure the folder exists
-		std::ofstream outFile(resultDir + "/server_2.txt");
+		std::ofstream outFile(resultDir + "/server_3.txt");
 
 		// Extract id_0 from both filters
 		for (const auto& filter : j["filters"]) {
-			if (filter.contains("shareID") && filter["shareID"].contains("id_1")) {
-				filter_ids.push_back(filter["shareID"]["id_1"].get<int64_t>());
+			if (filter.contains("shareID") && filter["shareID"].contains("id_2")) {
+				filter_ids.push_back(filter["shareID"]["id_2"].get<int64_t>());
 			}
 			if (filter.contains("whereClause")) {
 				where_clause = filter["whereClause"].get<std::string>();
@@ -548,7 +636,7 @@ namespace CloakQueryPathORAM
 		std::cout << "Count of tuples containing either filter_id in AVG Query: " << count << std::endl;
 	}
 
-	TEST_F(ORAMTestSSS, SQLAVGANDQuery) {
+	TEST_F(ORAMTestSQL, SQLAVGANDQuery) {
 		std::ifstream ifs("../SQL_Queries/AVG/Discount.json");
 		json j;
 		ifs >> j;
@@ -556,12 +644,12 @@ namespace CloakQueryPathORAM
 		std::vector<size_t> attr_idx;
 		std::string resultDir = "../Query_Result/AVGAND";
 		std::filesystem::create_directories(resultDir); // Ensure the folder exists
-		std::ofstream outFile(resultDir + "/server_2.txt");
+		std::ofstream outFile(resultDir + "/server_3.txt");
 
 		// Extract id_0 from both filters
 		for (const auto& filter : j["filters"]) {
-			if (filter.contains("shareID") && filter["shareID"].contains("id_1")) {
-				filter_ids.push_back(filter["shareID"]["id_1"].get<int64_t>());
+			if (filter.contains("shareID") && filter["shareID"].contains("id_2")) {
+				filter_ids.push_back(filter["shareID"]["id_2"].get<int64_t>());
 			}
 			if (filter.contains("whereClause")) {
 				where_clause = filter["whereClause"].get<std::string>();
@@ -600,7 +688,7 @@ namespace CloakQueryPathORAM
 		std::cout << "Count of tuples containing both filter_id in AVG Query: " << count << std::endl;
 	}
 	
-	TEST_F(ORAMTestSSS, SQLMINORQuery) {
+	TEST_F(ORAMTestSQL, SQLMINORQuery) {
 		std::ifstream ifs("../SQL_Queries/MIN/ExtendedPrice_Min.json");
 		json j;
 		ifs >> j;
@@ -608,12 +696,12 @@ namespace CloakQueryPathORAM
 		std::vector<size_t> attr_idx;
 		std::string resultDir = "../Query_Result/MINOR";
 		std::filesystem::create_directories(resultDir); // Ensure the folder exists
-		std::ofstream outFile(resultDir + "/server_2.txt");
+		std::ofstream outFile(resultDir + "/server_3.txt");
 
 		// Extract id_0 from both filters
 		for (const auto& filter : j["filters"]) {
-			if (filter.contains("shareID") && filter["shareID"].contains("id_1")) {
-				filter_ids.push_back(filter["shareID"]["id_1"].get<int64_t>());
+			if (filter.contains("shareID") && filter["shareID"].contains("id_2")) {
+				filter_ids.push_back(filter["shareID"]["id_2"].get<int64_t>());
 			}
 			if (filter.contains("whereClause")) {
 				where_clause = filter["whereClause"].get<std::string>();
@@ -652,7 +740,7 @@ namespace CloakQueryPathORAM
 		std::cout << "Count of tuples containing either filter_id in MIN Query: " << count << std::endl;
 	}
 
-	TEST_F(ORAMTestSSS, SQLMINANDQuery) {
+	TEST_F(ORAMTestSQL, SQLMINANDQuery) {
 		std::ifstream ifs("../SQL_Queries/MIN/Tax_Min.json");
 		json j;
 		ifs >> j;
@@ -660,12 +748,12 @@ namespace CloakQueryPathORAM
 		std::vector<size_t> attr_idx;
 		std::string resultDir = "../Query_Result/MINAND";
 		std::filesystem::create_directories(resultDir); // Ensure the folder exists
-		std::ofstream outFile(resultDir + "/server_2.txt");
+		std::ofstream outFile(resultDir + "/server_3.txt");
 
 		// Extract id_0 from both filters
 		for (const auto& filter : j["filters"]) {
-			if (filter.contains("shareID") && filter["shareID"].contains("id_1")) {
-				filter_ids.push_back(filter["shareID"]["id_1"].get<int64_t>());
+			if (filter.contains("shareID") && filter["shareID"].contains("id_2")) {
+				filter_ids.push_back(filter["shareID"]["id_2"].get<int64_t>());
 			}
 			if (filter.contains("whereClause")) {
 				where_clause = filter["whereClause"].get<std::string>();
@@ -704,7 +792,7 @@ namespace CloakQueryPathORAM
 		std::cout << "Count of tuples containing both filter_id in MIN Query: " << count << std::endl;
 	}
 
-	TEST_F(ORAMTestSSS, SQLMAXORQuery) {
+	TEST_F(ORAMTestSQL, SQLMAXORQuery) {
 		std::ifstream ifs("../SQL_Queries/MAX/ExtendedPrice_Max.json");
 		json j;
 		ifs >> j;
@@ -712,12 +800,12 @@ namespace CloakQueryPathORAM
 		std::vector<size_t> attr_idx;
 		std::string resultDir = "../Query_Result/MAXOR";
 		std::filesystem::create_directories(resultDir); // Ensure the folder exists
-		std::ofstream outFile(resultDir + "/server_2.txt");
+		std::ofstream outFile(resultDir + "/server_3.txt");
 
 		// Extract id_0 from both filters
 		for (const auto& filter : j["filters"]) {
-			if (filter.contains("shareID") && filter["shareID"].contains("id_1")) {
-				filter_ids.push_back(filter["shareID"]["id_1"].get<int64_t>());
+			if (filter.contains("shareID") && filter["shareID"].contains("id_2")) {
+				filter_ids.push_back(filter["shareID"]["id_2"].get<int64_t>());
 			}
 			if (filter.contains("whereClause")) {
 				where_clause = filter["whereClause"].get<std::string>();
@@ -756,7 +844,7 @@ namespace CloakQueryPathORAM
 		std::cout << "Count of tuples containing either filter_id in MAX Query: " << count << std::endl;
 	}
 
-	TEST_F(ORAMTestSSS, SQLMAXANDQuery) {
+	TEST_F(ORAMTestSQL, SQLMAXANDQuery) {
 		std::ifstream ifs("../SQL_Queries/MAX/Tax_Max.json");
 		json j;
 		ifs >> j;
@@ -764,12 +852,12 @@ namespace CloakQueryPathORAM
 		std::vector<size_t> attr_idx;
 		std::string resultDir = "../Query_Result/MAXAND";
 		std::filesystem::create_directories(resultDir); // Ensure the folder exists
-		std::ofstream outFile(resultDir + "/server_2.txt");
+		std::ofstream outFile(resultDir + "/server_3.txt");
 
 		// Extract id_0 from both filters
 		for (const auto& filter : j["filters"]) {
-			if (filter.contains("shareID") && filter["shareID"].contains("id_1")) {
-				filter_ids.push_back(filter["shareID"]["id_1"].get<int64_t>());
+			if (filter.contains("shareID") && filter["shareID"].contains("id_2")) {
+				filter_ids.push_back(filter["shareID"]["id_2"].get<int64_t>());
 			}
 			if (filter.contains("whereClause")) {
 				where_clause = filter["whereClause"].get<std::string>();
