@@ -92,17 +92,17 @@ size_t attributeIndex(const std::string& attribute) {
     auto it = attributeMap.find(attribute);
     return (it != attributeMap.end()) ? it->second : -1;
 }
-// size_t loadCommonSecretShareSize() {
-//     std::ifstream sizeFile("../backup_sql/common_secret_share_size.txt");
-//     size_t size = 0;
-//     if (sizeFile.is_open()) {
-//         sizeFile >> size;
-//         sizeFile.close();
-//     } else {
-//         throw std::runtime_error("Could not open common_secret_share_size.txt");
-//     }
-//     return size;
-// }
+size_t loadCommonSecretShareSize() {
+    std::ifstream sizeFile("../backup_ser6/common_secret_share_size.txt");
+    size_t size = 0;
+    if (sizeFile.is_open()) {
+        sizeFile >> size;
+        sizeFile.close();
+    } else {
+        throw std::runtime_error("Could not open common_secret_share_size.txt");
+    }
+    return size;
+}
 
 namespace CloakQueryPathORAM
 {
@@ -148,7 +148,7 @@ namespace CloakQueryPathORAM
 			std::cout << "Called in initialize with key size: " << KEY.size() << std::endl;
 			std::cout << "CAPACITY: " << CAPACITY << ", Z: " << Z << ", map size: " << (CAPACITY * Z + Z) << std::endl;
 			// Use the same backupDir as backupGenerator()
-			std::string backupDir = "../backup_ser3";
+			std::string backupDir = "../backup_ser6";
 			if (!std::filesystem::exists(backupDir)) {
 				std::filesystem::create_directory(backupDir);
 			}
@@ -179,7 +179,7 @@ namespace CloakQueryPathORAM
 		>
 		initializeFromBackup (size_t secretSharesSize, int serverIndex) {
 			// Store path to the backup directory
-			std::string backupDir = "../backup_ser3";
+			std::string backupDir = "../backup_ser6";
 			std::string keyFile = backupDir + "/key_server_" + std::to_string(serverIndex) + ".bin";
 			std::string posmapFile = backupDir + "/position-map_server_" + std::to_string(serverIndex) + ".bin";
 			std::string stashFile = backupDir + "/stash_server_" + std::to_string(serverIndex) + ".bin";
@@ -257,7 +257,7 @@ namespace CloakQueryPathORAM
 		 std::unique_ptr<ORAM>& oram,
 		int serverIndex)
 		{
-			std::string backupDir = "../backup_ser3";
+			std::string backupDir = "../backup_ser6";
 			if (!std::filesystem::exists(backupDir)) {
 				std::filesystem::create_directory(backupDir);
 			}
@@ -360,7 +360,7 @@ namespace CloakQueryPathORAM
         //std::cout << "Common secret share size: " << commonSecretShareSize << std::endl;
         // Retrieve all the data in the ORAM and store it in a text file
         auto [storage, map, stash, oram] = initializeFromBackup(commonSecretShareSize, 5); // Initialize from backup for server 0
-        std::string usedBlockIDsFile = "../backup_ser3/used_block_ids_server_5.bin";
+        std::string usedBlockIDsFile = "../backup_ser6/used_block_ids_server_5.bin";
         
         // Use getUsedBlockIDs to only iterate over blocks that actually contain data
         std::unordered_set<number> usedBlockIDs = loadUsedBlockIDs(usedBlockIDsFile);
@@ -375,7 +375,7 @@ namespace CloakQueryPathORAM
             std::cout << "Used block ID: " << id << std::endl;
         }
         // Load mac map from file
-        oram->loadMacMap("../backup_ser3/mac_map_server_5.bin");
+        oram->loadMacMap("../backup_ser6/mac_map_server_5.bin");
 
         for (number id : sortedUsedBlockIDs)
         {
@@ -386,7 +386,7 @@ namespace CloakQueryPathORAM
         }
         std::cout << "Total number of blocks stored in the ORAM: while getting: " << usedBlockIDs.size() << std::endl;
         // Load the original secret shares for verification
-        std::vector<std::vector<int64_t>> secretShares = loadSecretShares(3);
+        std::vector<std::vector<int64_t>> secretShares = loadSecretShares(6);
         ASSERT_EQ(retrievedShares_global.size(), secretShares.size());
         ASSERT_EQ(secretShares[0].size(), retrievedShares_global[0].size());
         for (size_t j = 0; j < secretShares.size(); ++j)
@@ -488,7 +488,7 @@ namespace CloakQueryPathORAM
 		std::vector<size_t> attr_idx;
 		std::string resultDir = "../Query_Result/SUMOR";
 		std::filesystem::create_directories(resultDir); // Ensure the folder exists
-		std::ofstream outFile(resultDir + "/server_3.txt");
+		std::ofstream outFile(resultDir + "/server_6.txt");
 
 		// Extract id_0 from both filters
 		for (const auto& filter : j["filters"]) {
@@ -540,7 +540,7 @@ namespace CloakQueryPathORAM
 		std::vector<size_t> attr_idx;
 		std::string resultDir = "../Query_Result/SUMAND";
 		std::filesystem::create_directories(resultDir); // Ensure the folder exists
-		std::ofstream outFile(resultDir + "/server_3.txt");
+		std::ofstream outFile(resultDir + "/server_6.txt");
 
 		// Extract id_0 from both filters
 		for (const auto& filter : j["filters"]) {
@@ -592,7 +592,7 @@ namespace CloakQueryPathORAM
 		std::vector<size_t> attr_idx;
 		std::string resultDir = "../Query_Result/AVGOR";
 		std::filesystem::create_directories(resultDir); // Ensure the folder exists
-		std::ofstream outFile(resultDir + "/server_3.txt");
+		std::ofstream outFile(resultDir + "/server_6.txt");
 
 		// Extract id_0 from both filters
 		for (const auto& filter : j["filters"]) {
@@ -644,7 +644,7 @@ namespace CloakQueryPathORAM
 		std::vector<size_t> attr_idx;
 		std::string resultDir = "../Query_Result/AVGAND";
 		std::filesystem::create_directories(resultDir); // Ensure the folder exists
-		std::ofstream outFile(resultDir + "/server_3.txt");
+		std::ofstream outFile(resultDir + "/server_6.txt");
 
 		// Extract id_0 from both filters
 		for (const auto& filter : j["filters"]) {
@@ -696,7 +696,7 @@ namespace CloakQueryPathORAM
 		std::vector<size_t> attr_idx;
 		std::string resultDir = "../Query_Result/MINOR";
 		std::filesystem::create_directories(resultDir); // Ensure the folder exists
-		std::ofstream outFile(resultDir + "/server_3.txt");
+		std::ofstream outFile(resultDir + "/server_6.txt");
 
 		// Extract id_0 from both filters
 		for (const auto& filter : j["filters"]) {
@@ -748,7 +748,7 @@ namespace CloakQueryPathORAM
 		std::vector<size_t> attr_idx;
 		std::string resultDir = "../Query_Result/MINAND";
 		std::filesystem::create_directories(resultDir); // Ensure the folder exists
-		std::ofstream outFile(resultDir + "/server_3.txt");
+		std::ofstream outFile(resultDir + "/server_6.txt");
 
 		// Extract id_0 from both filters
 		for (const auto& filter : j["filters"]) {
@@ -800,7 +800,7 @@ namespace CloakQueryPathORAM
 		std::vector<size_t> attr_idx;
 		std::string resultDir = "../Query_Result/MAXOR";
 		std::filesystem::create_directories(resultDir); // Ensure the folder exists
-		std::ofstream outFile(resultDir + "/server_3.txt");
+		std::ofstream outFile(resultDir + "/server_6.txt");
 
 		// Extract id_0 from both filters
 		for (const auto& filter : j["filters"]) {
@@ -852,7 +852,7 @@ namespace CloakQueryPathORAM
 		std::vector<size_t> attr_idx;
 		std::string resultDir = "../Query_Result/MAXAND";
 		std::filesystem::create_directories(resultDir); // Ensure the folder exists
-		std::ofstream outFile(resultDir + "/server_3.txt");
+		std::ofstream outFile(resultDir + "/server_6.txt");
 
 		// Extract id_0 from both filters
 		for (const auto& filter : j["filters"]) {

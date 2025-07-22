@@ -1,3 +1,6 @@
+#ifndef SHAMIR_PARSER_H
+#define SHAMIR_PARSER_H
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -72,3 +75,5 @@ class ShamirParser {
         template <typename T> std::unordered_map<T, int> mapUniqueValues(const std::vector<T>& values);
         
 };
+
+#endif // SHAMIR_PARSER_H

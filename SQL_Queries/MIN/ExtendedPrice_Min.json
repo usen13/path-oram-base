@@ -13,7 +13,7 @@
             }
         },
         {
-            "whereClause": "AND"
+            "whereClause": "OR"
         },
         {
             "attribute": "LINESTATUS",

@@ -60,6 +60,14 @@ TESTSSS = $(BDIR)/test-sss
 TESTSQL = $(BDIR)/test-sql
 
 TESTSER3 = $(BDIR)/test-ser3
+TESTSER4 = $(BDIR)/test-ser4
+TESTSER5 = $(BDIR)/test-ser5
+TESTSER6 = $(BDIR)/test-ser6
+
+TESTSUM = $(BDIR)/test-sum
+TESTAVG = $(BDIR)/test-avg
+TESTMAX = $(BDIR)/test-max
+TESTMIN = $(BDIR)/test-min
 
 ENTRYPOINTCC = $(CC) -o $@ $^ $(CPPFLAGS) $(INCLUDES) $(LDLIBS) $(LDTESTLIBS) $(LDFLAGS)
 
@@ -125,6 +133,90 @@ clean-test-ser3:
 
 debug-test-ser3: CPPFLAGS += -g -DTESTING	-fdebug-prefix-map=$(PWD)=.
 debug-test-ser3: $(TESTSER3)
+
+$(TESTSER4): $(OBJ) $(TDIR)/test-ser4.cpp
+	$(ENTRYPOINTCC)
+
+run-test-ser4: $(TESTSER4)
+	$(TESTSER4)
+
+clean-test-ser4:
+	$(RM) $(TESTSER4)
+
+debug-test-ser4: CPPFLAGS += -g -DTESTING	-fdebug-prefix-map=$(PWD)=.
+debug-test-ser4: $(TESTSER4)
+
+$(TESTSER5): $(OBJ) $(TDIR)/test-ser5.cpp
+	$(ENTRYPOINTCC)
+
+run-test-ser5: $(TESTSER5)
+	$(TESTSER5)
+
+clean-test-ser5:
+	$(RM) $(TESTSER5)
+
+debug-test-ser5: CPPFLAGS += -g -DTESTING	-fdebug-prefix-map=$(PWD)=.
+debug-test-ser5: $(TESTSER5)
+
+$(TESTSER6): $(OBJ) $(TDIR)/test-ser6.cpp
+	$(ENTRYPOINTCC)
+
+run-test-ser6: $(TESTSER6)
+	$(TESTSER6)
+
+clean-test-ser6:
+	$(RM) $(TESTSER6)
+
+debug-test-ser6: CPPFLAGS += -g -DTESTING	-fdebug-prefix-map=$(PWD)=.
+debug-test-ser6: $(TESTSER6)
+
+$(TESTSUM): $(OBJ) $(TDIR)/test-sum.cpp
+	$(ENTRYPOINTCC)
+
+run-test-sum: $(TESTSUM)
+	$(TESTSUM)
+
+clean-test-sum:
+	$(RM) $(TESTSUM)
+
+debug-test-sum: CPPFLAGS += -g -DTESTING	-fdebug-prefix-map=$(PWD)=.
+debug-test-sum: $(TESTSUM)
+
+$(TESTAVG): $(OBJ) $(TDIR)/test-avg.cpp
+	$(ENTRYPOINTCC)
+
+run-test-avg: $(TESTAVG)
+	$(TESTAVG)
+
+clean-test-avg:
+	$(RM) $(TESTAVG)
+
+debug-test-avg: CPPFLAGS += -g -DTESTING	-fdebug-prefix-map=$(PWD)=.
+debug-test-avg: $(TESTAVG)
+
+$(TESTMAX): $(OBJ) $(TDIR)/test-max.cpp
+	$(ENTRYPOINTCC)
+
+run-test-max: $(TESTMAX)
+	$(TESTMAX)
+
+clean-test-max:
+	$(RM) $(TESTMAX)
+
+debug-test-max: CPPFLAGS += -g -DTESTING	-fdebug-prefix-map=$(PWD)=.
+debug-test-max: $(TESTMAX)
+
+$(TESTMIN): $(OBJ) $(TDIR)/test-min.cpp
+	$(ENTRYPOINTCC)
+
+run-test-min: $(TESTMIN)
+	$(TESTMIN)
+
+clean-test-min:
+	$(RM) $(TESTMIN)
+
+debug-test-min: CPPFLAGS += -g -DTESTING	-fdebug-prefix-map=$(PWD)=.
+debug-test-min: $(TESTMIN)
 
 shared-debug: CPPFLAGS += -g -DDEBUG
 shared-debug: shared

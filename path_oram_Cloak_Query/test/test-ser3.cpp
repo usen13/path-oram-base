@@ -92,17 +92,17 @@ size_t attributeIndex(const std::string& attribute) {
     auto it = attributeMap.find(attribute);
     return (it != attributeMap.end()) ? it->second : -1;
 }
-// size_t loadCommonSecretShareSize() {
-//     std::ifstream sizeFile("../backup_sql/common_secret_share_size.txt");
-//     size_t size = 0;
-//     if (sizeFile.is_open()) {
-//         sizeFile >> size;
-//         sizeFile.close();
-//     } else {
-//         throw std::runtime_error("Could not open common_secret_share_size.txt");
-//     }
-//     return size;
-// }
+size_t loadCommonSecretShareSize() {
+    std::ifstream sizeFile("../backup_ser3/common_secret_share_size.txt");
+    size_t size = 0;
+    if (sizeFile.is_open()) {
+        sizeFile >> size;
+        sizeFile.close();
+    } else {
+        throw std::runtime_error("Could not open common_secret_share_size.txt");
+    }
+    return size;
+}
 
 namespace CloakQueryPathORAM
 {
