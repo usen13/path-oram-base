@@ -58,17 +58,19 @@ int64_t reconstructSecret(const std::vector<std::pair<int64_t, int64_t>>& shares
     return static_cast<int64_t>(std::round(secret));
 }
 
-class AvgAggregationTest : public ::testing::Test {
+class AvgAggregationTest : public ::testing::TestWithParam<std::tuple<std::string, std::string>> {
 protected:
-    std::string jsonPath = "../SQL_Queries/AVG/Quantity.json";
-    std::string resultDir = "../Query_Result/AVGOR";
+    std::string jsonPath; //= "../SQL_Queries/AVG/Quantity.json";
+    std::string resultDir; //= "../Query_Result/AVGOR";
     int numServers = 6;
     int threshold = 3;
     int totalTuples = 0;
     size_t sumIdx;
     std::vector<int64_t> server_sums;
     std::vector<int> server_indices;
+
     void SetUp() override {
+        auto [jsonPath, resultDir] = GetParam();
         // Parse JSON
         std::ifstream jsonFile(jsonPath);
         json j;
@@ -104,7 +106,16 @@ protected:
     }
 };
 
-TEST_F(AvgAggregationTest, ReconstructAvgWithShamirParser) {
+INSTANTIATE_TEST_SUITE_P(
+    AvgDirs,
+    AvgAggregationTest,
+    ::testing::Values(
+        std::make_tuple("../SQL_Queries/AVG/Quantity.json", "../Query_Result/AVGOR"),
+        std::make_tuple("../SQL_Queries/AVG/Discount.json", "../Query_Result/AVGAND")
+    )
+);
+
+TEST_P(AvgAggregationTest, ReconstructAvgWithShamirParser) {
     // Prepare shares for reconstruction
     std::vector<std::pair<int64_t, int64_t>> shares;
     for (size_t i = 0; i < server_indices.size(); ++i) {

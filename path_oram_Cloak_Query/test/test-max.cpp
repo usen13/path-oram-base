@@ -104,7 +104,7 @@ std::string intToString(int64_t value) {
     return result;
 }
 
-std::vector<std::vector<std::vector<int64_t>>> loadAllShares(int n) {
+std::vector<std::vector<std::vector<int64_t>>> loadAllShares(int n, const std::string& jsonPath) {
     std::vector<std::vector<std::vector<int64_t>>> allShares(n);
 // The format of allShares is as follows:
 // Inner most vector contains the shares for a single tuple, in total 16 shares attributes
@@ -186,10 +186,10 @@ double getMaxFromItems(const std::vector<LineItem>& items, const std::string& at
     return maxValue;
 }
 
-class MaxAggregationTest : public ::testing::Test {
+class MaxAggregationTest : public ::testing::TestWithParam<std::tuple<std::string, std::string>> {
 protected:
-    std::string jsonPath = "../SQL_Queries/MAX/ExtendedPrice_Max.json";
-    std::string resultDir = "../Query_Result/MAXOR";
+    std::string jsonPath;
+    std::string resultDir;
     int numServers = 6;
     int threshold = 3;
     int totalTuples = 0;
@@ -198,6 +198,7 @@ protected:
     std::vector<int64_t> server_sums;
     std::vector<int> server_indices;
     void SetUp() override {
+        std::tie(jsonPath, resultDir) = GetParam();
         // Parse JSON
         std::ifstream jsonFile(jsonPath);
         json j;
@@ -234,19 +235,27 @@ protected:
 };
 
 
+INSTANTIATE_TEST_SUITE_P(
+    AvgDirs,
+    MaxAggregationTest,
+    ::testing::Values(
+        std::make_tuple("../SQL_Queries/MAX/ExtendedPrice_Max.json", "../Query_Result/MAXOR"),
+        std::make_tuple("../SQL_Queries/MAX/Tax_Max.json", "../Query_Result/MAXAND")
+    )
+);
 
-TEST_F(MaxAggregationTest, ReconstructMAXWithShamirParser) {
+TEST_P(MaxAggregationTest, ReconstructMAXWithShamirParser) {
     // Prepare shares for reconstruction
     std::vector<std::pair<int64_t, int64_t>> shares;
     for (size_t i = 0; i < server_indices.size(); ++i) {
         shares.emplace_back(server_indices[i], server_sums[i]);
     }
-    std::string resultDir = "../Query_Result/MAXOR";
+
     std::string filename = "reconstructed_max.txt";
 
     std::vector<LineItem> reconstructedItems;
 
-    auto tempShares = loadAllShares(6);
+    auto tempShares = loadAllShares(6, jsonPath);
     auto allShares = transformShares(tempShares);
 
     for (size_t i = 0; i < tempShares[0].size(); ++i) {

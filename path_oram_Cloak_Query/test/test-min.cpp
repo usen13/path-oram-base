@@ -104,13 +104,13 @@ std::string intToString(int64_t value) {
     return result;
 }
 
-std::vector<std::vector<std::vector<int64_t>>> loadAllShares(int n) {
+std::vector<std::vector<std::vector<int64_t>>> loadAllShares(int n, const std::string& jsonPath) {
     std::vector<std::vector<std::vector<int64_t>>> allShares(n);
 // The format of allShares is as follows:
 // Inner most vector contains the shares for a single tuple, in total 16 shares attributes
 // Middle vector contains all the tuples for a single server, in total n tuples 
 // Outer most vector must contain shares of total n servers, in our case n = 6
-std::string baseDir = "../Query_Result/MAXOR"; // Relative path to the shares directory
+std::string baseDir = jsonPath; // Relative path to the shares directory
 
     for (int serverIndex = 1; serverIndex < n; ++serverIndex) {
         std::string filePath = baseDir + "/server_" + std::to_string(serverIndex) + ".txt";
@@ -186,10 +186,10 @@ double getMinFromItems(const std::vector<LineItem>& items, const std::string& at
     return minValue;
 }
 
-class MinAggregationTest : public ::testing::Test {
+class MinAggregationTest : public ::testing::TestWithParam<std::tuple<std::string, std::string>> {
 protected:
-    std::string jsonPath = "../SQL_Queries/MIN/ExtendedPrice_Min.json";
-    std::string resultDir = "../Query_Result/MINOR";
+    std::string jsonPath;
+    std::string resultDir;
     int numServers = 6;
     int threshold = 3;
     int totalTuples = 0;
@@ -198,6 +198,7 @@ protected:
     std::vector<int64_t> server_sums;
     std::vector<int> server_indices;
     void SetUp() override {
+        std::tie(jsonPath, resultDir) = GetParam();
         // Parse JSON
         std::ifstream jsonFile(jsonPath);
         json j;
@@ -233,20 +234,27 @@ protected:
     }
 };
 
+INSTANTIATE_TEST_SUITE_P(
+    AvgDirs,
+    MinAggregationTest,
+    ::testing::Values(
+        std::make_tuple("../SQL_Queries/MIN/ExtendedPrice_Min.json", "../Query_Result/MINOR"),
+        std::make_tuple("../SQL_Queries/MIN/Tax_Min.json", "../Query_Result/MINAND")
+    )
+);
 
-
-TEST_F(MinAggregationTest, ReconstructMINWithShamirParser) {
+TEST_P(MinAggregationTest, ReconstructMINWithShamirParser) {
     // Prepare shares for reconstruction
     std::vector<std::pair<int64_t, int64_t>> shares;
     for (size_t i = 0; i < server_indices.size(); ++i) {
         shares.emplace_back(server_indices[i], server_sums[i]);
     }
-    std::string resultDir = "../Query_Result/MINOR";
+
     std::string filename = "reconstructed_min.txt";
 
     std::vector<LineItem> reconstructedItems;
-
-    auto tempShares = loadAllShares(6);
+    std::vector<std::vector<std::vector<int64_t>>> tempShares;
+    tempShares = loadAllShares(6, resultDir);
     auto allShares = transformShares(tempShares);
 
     for (size_t i = 0; i < tempShares[0].size(); ++i) {

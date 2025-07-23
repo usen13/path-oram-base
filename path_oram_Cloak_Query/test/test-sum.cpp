@@ -58,16 +58,17 @@ int64_t reconstructSecret(const std::vector<std::pair<int64_t, int64_t>>& shares
     return static_cast<int64_t>(std::round(secret));
 }
 
-class SumAggregationTest : public ::testing::Test {
+class SumAggregationTest : public ::testing::TestWithParam<std::tuple<std::string, std::string>> {
 protected:
-    std::string jsonPath = "../SQL_Queries/SUM/ExtendedPrice.json";
-    std::string resultDir = "../Query_Result/SUMAND";
+    std::string jsonPath;
+    std::string resultDir;
     int numServers = 6;
     int threshold = 3;
     size_t sumIdx;
     std::vector<int64_t> server_sums;
     std::vector<int> server_indices;
     void SetUp() override {
+        auto [jsonPath, resultDir] = GetParam();
         // Parse JSON
         std::ifstream jsonFile(jsonPath);
         json j;
@@ -101,7 +102,16 @@ protected:
     }
 };
 
-TEST_F(SumAggregationTest, ReconstructSumWithShamirParser) {
+INSTANTIATE_TEST_SUITE_P(
+    AvgDirs,
+    SumAggregationTest,
+    ::testing::Values(
+        std::make_tuple("../SQL_Queries/SUM/ExtendedPrice.json", "../Query_Result/SUMOR"),
+        std::make_tuple("../SQL_Queries/SUM/Quantity.json", "../Query_Result/SUMAND")
+    )
+);
+
+TEST_P(SumAggregationTest, ReconstructSumWithShamirParser) {
     // Prepare shares for reconstruction
     std::vector<std::pair<int64_t, int64_t>> shares;
     for (size_t i = 0; i < server_indices.size(); ++i) {
