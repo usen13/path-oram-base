@@ -204,8 +204,11 @@ namespace CloakQueryPathORAM
 		}
 		stash->get(block, response);
 
-		// step 4 from paper: write path
+		// step 4 from paper: write path and save timing data
+		auto reshuffleStart = std::chrono::high_resolution_clock::now();
 		writePath(previousPosition); // stash updated
+		auto reshuffleEnd = std::chrono::high_resolution_clock::now();
+		totalReshuffleTime += std::chrono::duration_cast<std::chrono::milliseconds>(reshuffleEnd - reshuffleStart).count();
 	}
 
 	uint64_t ORAM::getAccessCount(const number block) const
@@ -305,8 +308,12 @@ namespace CloakQueryPathORAM
 				{
 					level++;
 				}
+				auto start = std::chrono::high_resolution_clock::now();
+				bool ok = verifyBucketMAC(level, leaf, bucketData);
+				auto end = std::chrono::high_resolution_clock::now();
+				totalIntegrityCheckTime += std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 
-				if (!verifyBucketMAC(level, leaf, bucketData))
+				if (!ok)
 				{
 					throw Exception("Bucket integrity check failed during readPath for bucket ID: " + std::to_string(bucketId));
 				}
@@ -387,9 +394,14 @@ namespace CloakQueryPathORAM
 			
 
 			// Verify the integrity of the bucket before writing it back
-			if (!verifyBucketMAC(level, leaf, bucketData))
+			auto start = std::chrono::high_resolution_clock::now();
+			bool ok = verifyBucketMAC(level, leaf, bucketData);
+			auto end = std::chrono::high_resolution_clock::now();
+			totalIntegrityCheckTime += std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+
+			if (!ok)
 			{
-				throw Exception("Bucket integrity check failed during writePath for bucket ID: " + std::to_string(bucketId));
+				throw Exception("Bucket integrity check failed during readPath for bucket ID: " + std::to_string(bucketId));
 			}
 
 			requests.push_back({bucketId, bucketData});
@@ -520,10 +532,16 @@ namespace CloakQueryPathORAM
 						leaf = bucketId << (height - level - 1);
 					}
 					// Verify the integrity of the bucket before writing it back
-					if (!verifyBucketMAC(level, leaf, bucket))
+					auto start = std::chrono::high_resolution_clock::now();
+					bool ok = verifyBucketMAC(level, leaf, bucket);
+					auto end = std::chrono::high_resolution_clock::now();
+					totalIntegrityCheckTime += std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+
+					if (!ok)
 					{
-						throw Exception("Bucket integrity check failed during getCache for bucket ID: " + std::to_string(toGet[i / Z]));
+						throw Exception("Bucket integrity check failed during readPath for bucket ID: " + std::to_string(bucketId));
 					}
+					
 					cache[toGet[i / Z]] = bucket;
 					bucket.clear();
 				}
@@ -580,7 +598,6 @@ namespace CloakQueryPathORAM
 		// {
 		// 	std::cout << std::hex << static_cast<int>(byte);
 		// }
-		std::cout << std::endl;
 		//hash.resize(dataSize, 0x00); // Resize to match the block size
 		//bucketData[Z-1].first = ULONG_MAX; // Use ULONG_MAX as the block ID for the hash
 		//bucketData[Z-1].second = hash; 

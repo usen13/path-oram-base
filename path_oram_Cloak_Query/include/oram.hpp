@@ -43,6 +43,10 @@ namespace CloakQueryPathORAM
 		static bytes key; // key used for HMAC generation
 		static bool isKeyGenerated; // Flag to indicate if the key has been generated
 
+		// Timing variables
+		mutable long long totalIntegrityCheckTime = 0;
+		mutable long long totalReshuffleTime = 0;
+
 		// a layer between (expensive) storage and the protocol;
 		// holds items (buckets of blocks) in memory and unencrypted;
 		unordered_map<number, bucket> cache;
@@ -323,6 +327,23 @@ namespace CloakQueryPathORAM
 		 */
 		std::vector<number> getUsedBlockIDs() const {
 			return std::vector<number>(usedBlockIDs.begin(), usedBlockIDs.end());
+		}
+
+		/**
+		 * @brief Return the total time spent on integrity checks
+		 */
+		long long getTotalIntegrityCheckTime() const { return totalIntegrityCheckTime; }
+
+		/**
+		 * @brief Return the total time spent on reshuffling
+		 */
+		long long getTotalReshuffleTime() const { return totalReshuffleTime; }
+
+		/** @brief Reset the timing counters for integrity checks and reshuffles
+		 */
+		void resetTimingMetrics() {
+			totalIntegrityCheckTime = 0;
+			totalReshuffleTime = 0;
 		}
 	};
 }

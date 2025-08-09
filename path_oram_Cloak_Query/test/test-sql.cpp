@@ -7,6 +7,7 @@
 #include "gtest/gtest.h"
 #include <math.h>
 #include <thread>
+#include <mutex>
 #include "../../cpp-sql-server/src/sql_handler.h"
 #include "../../cpp-sql-server/src/sql_utils.h"
 using json = nlohmann::json;
@@ -89,6 +90,48 @@ size_t attributeIndex(const std::string& attribute) {
     return (it != attributeMap.end()) ? it->second : -1;
 }
 
+/*
+ * This struct is used to store the timing details of various operations in the ORAM test.
+ * It includes the following fields:
+ * puttingShares for the time taken to put shares
+ * gettingShares for the time taken to get shares
+ * queryTranslation for the time taken to translate queries
+ * shufflePaths for the time taken to shuffle paths
+ * integrityCheck for the time taken to perform integrity checks.
+ */
+struct timingDetails {
+	long long puttingShares; // Time taken to put shares in ms.
+	long long gettingShares; // Time taken to get shares in ms.
+	long long queryTranslation; // Time taken for translating the query into read write queries.
+	long long shufflePaths; // Time taken to shuffle the ORAM paths.
+	long long integrityCheck; // Time taken for integrity check.
+	std::string testName; // Test name.
+};
+
+std::mutex timing_metrics_mutex;
+
+void writeTimingMetric(const timingDetails& details, bool truncate = false) {
+    std::lock_guard<std::mutex> lock(timing_metrics_mutex);
+    std::ofstream ofs;
+    if (truncate) {
+		ofs.open("../backup_sql/timing_metrics.txt", std::ios::out | std::ios::trunc);
+	} else {
+        ofs.open("../backup_sql/timing_metrics.txt", std::ios::out | std::ios::app);
+	}
+	if (ofs.is_open() && details.testName != "") {
+		if (details.shufflePaths != 0)
+			ofs << details.testName << " Shuffle Paths: " << details.shufflePaths << " ms" << std::endl;
+		if (details.integrityCheck != 0)
+			ofs << details.testName << " Integrity Check: " << details.integrityCheck << " ms" << std::endl;
+		if (details.puttingShares != 0)
+			ofs << details.testName << " Putting Shares: " << details.puttingShares << " ms" << std::endl;
+		if (details.gettingShares != 0)
+			ofs << details.testName << " Getting Shares: " << details.gettingShares << " ms" << std::endl;
+		if (details.queryTranslation != 0)
+			ofs << details.testName << " Query Translation: " << details.queryTranslation << " ms" << std::endl;
+		ofs.close();
+	}
+}
 namespace CloakQueryPathORAM
 {
     class ORAMTestSQL : public ::testing::Test
@@ -273,6 +316,22 @@ namespace CloakQueryPathORAM
 			oram->saveMacMap(macMapFile);
 			//oram.reset();
 		}
+		
+		std::unique_ptr<ORAM> loadORAMAndShares() {
+			std::vector<std::vector<int64_t>> retrievedShares;
+			auto [storage, map, stash, oram] = initializeFromBackup(commonSecretShareSize, 1);
+			std::string usedBlockIDsFile = "../backup_ser3/used_block_ids_server_2.bin";
+			std::unordered_set<number> usedBlockIDs = loadUsedBlockIDs(usedBlockIDsFile);
+			std::vector<number> sortedUsedBlockIDs(usedBlockIDs.begin(), usedBlockIDs.end());
+			std::sort(sortedUsedBlockIDs.begin(), sortedUsedBlockIDs.end());
+			oram->loadMacMap("../backup_ser3/mac_map_server_2.bin");
+			for (number id : sortedUsedBlockIDs) {
+				std::vector<std::vector<int64_t>> blockShares;
+				blockShares = oram->getContainer(id);
+				retrievedShares.insert(retrievedShares.end(), blockShares.begin(), blockShares.end());
+			}
+			return std::move(oram);
+		}
 
         void callSyncCache(std::unique_ptr<ORAM>& oram) {
 			oram->syncCache();
@@ -335,35 +394,48 @@ namespace CloakQueryPathORAM
 
     TEST_F(ORAMTestSQL, GetContainerSingleORAM)
     {
+		using namespace std::chrono;
+
+		timingDetails details = {};
+		details.testName = "GetContainerServerORAM";
+
         // Retrieved secret shares
-        std::vector<std::vector<int64_t>> retrievedSecretShares;
+		std::vector<std::vector<int64_t>> retrievedSecretShares;
+
         // Retrieve all the data in the ORAM and store it in a text file
         auto [storage, map, stash, oram] = initializeFromBackup(commonSecretShareSize, 0); // Initialize from backup for server 0
         std::string usedBlockIDsFile = "../backup_sql/used_block_ids_server_0.bin";
+		oram->resetTimingMetrics(); // Reset the timing metrics before starting the test
         
         // Use getUsedBlockIDs to only iterate over blocks that actually contain data
         std::unordered_set<number> usedBlockIDs = loadUsedBlockIDs(usedBlockIDsFile);
         // sort the usedBlockIDs to ensure they are in order
         std::vector<number> sortedUsedBlockIDs(usedBlockIDs.begin(), usedBlockIDs.end());
         std::sort(sortedUsedBlockIDs.begin(), sortedUsedBlockIDs.end());
-        std::cout << "Total number of blocks stored in the ORAM: " << usedBlockIDs.size() << std::endl;
-        std::cout << "Total number of blocks stored in the ORAM: while getting: " << sortedUsedBlockIDs.size() << std::endl;
+        //std::cout << "Total number of blocks stored in the ORAM: " << usedBlockIDs.size() << std::endl;
+        //std::cout << "Total number of blocks stored in the ORAM: while getting: " << sortedUsedBlockIDs.size() << std::endl;
         // Print the used block IDs
-        for (const auto& id : sortedUsedBlockIDs)
-        {
-            std::cout << "Used block ID: " << id << std::endl;
-        }
+        // for (const auto& id : sortedUsedBlockIDs)
+        // {
+        //     std::cout << "Used block ID: " << id << std::endl;
+        // }
         // Load mac map from file
         oram->loadMacMap("../backup_sql/mac_map_server_0.bin");
 
+		// Measure the time taken to put shares
+		auto shareStart = std::chrono::high_resolution_clock::now();
+
         for (number id : sortedUsedBlockIDs)
         {
-            std::cout << "Reading block ID: " << id << std::endl;
+            //std::cout << "Reading block ID: " << id << std::endl;
             std::vector<std::vector<int64_t>> blockShares;
             ASSERT_NO_THROW(blockShares = oram->getContainer(id));
             retrievedShares_global.insert(retrievedShares_global.end(), blockShares.begin(), blockShares.end());
         }
-        std::cout << "Total number of blocks stored in the ORAM: while getting: " << usedBlockIDs.size() << std::endl;
+
+		details.gettingShares = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - shareStart).count();
+		
+		std::cout << "Total number of blocks stored in the ORAM: while getting: " << usedBlockIDs.size() << std::endl;
         // Load the original secret shares for verification
         std::vector<std::vector<int64_t>> secretShares = loadSecretShares(1);
         ASSERT_EQ(retrievedShares_global.size(), secretShares.size());
@@ -372,7 +444,11 @@ namespace CloakQueryPathORAM
         {
             ASSERT_EQ(secretShares[j], retrievedShares_global[j]);
         }
-        std::cout<< "Retrieved all secret shares successfully." << std::endl;
+
+		std::cout<< "Retrieved all secret shares successfully." << std::endl;
+		details.integrityCheck = oram->getTotalIntegrityCheckTime();
+		details.shufflePaths = oram->getTotalReshuffleTime();
+        writeTimingMetric(details, true);
     }
 
 	TEST_F(ORAMTestSQL, SQLCountORQuery) {
@@ -381,6 +457,17 @@ namespace CloakQueryPathORAM
 		ifs >> j;
 		std::vector<std::string> attributeIDs;
 		std::vector<size_t> attr_idx;
+
+		using namespace std::chrono;
+		timingDetails details = {};
+		details.testName = "SQLCountORQuery";
+
+		auto shareStart = std::chrono::high_resolution_clock::now();
+		auto oram = loadORAMAndShares();
+		details.gettingShares = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - shareStart).count();
+
+		// Start tracking the time for query translation
+		auto start = std::chrono::high_resolution_clock::now();
 
 		// Extract id_0 from both filters
 		for (const auto& filter : j["filters"]) {
@@ -414,6 +501,13 @@ namespace CloakQueryPathORAM
 			count++;
 			}
 		}
+
+		auto end = std::chrono::high_resolution_clock::now();
+		details.queryTranslation = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+		details.integrityCheck = oram->getTotalIntegrityCheckTime();
+		details.shufflePaths = oram->getTotalReshuffleTime();
+		writeTimingMetric(details);
+
 		std::cout << "Count of tuples containing either filter_id: " << count << std::endl;
 	}
 
@@ -423,6 +517,16 @@ namespace CloakQueryPathORAM
 		ifs >> j;
 		std::vector<std::string> attributeIDs;
 		std::vector<size_t> attr_idx;
+
+		timingDetails details = {};
+		details.testName = "SQLCountANDQuery";
+
+		auto shareStart = std::chrono::high_resolution_clock::now();
+		auto oram = loadORAMAndShares();
+		details.gettingShares = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now()	 - shareStart).count();
+
+		// Start tracking the time for query translation
+		auto start = std::chrono::high_resolution_clock::now();
 
 		// Extract id_0 from both filters
 		for (const auto& filter : j["filters"]) {
@@ -456,14 +560,34 @@ namespace CloakQueryPathORAM
 			count++;
 			}
 		}
-	std::cout << "Count of tuples containing both filter_ids: " << count << std::endl;
+		
+		auto end = std::chrono::high_resolution_clock::now();
+		details.queryTranslation = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+		details.integrityCheck = oram->getTotalIntegrityCheckTime();
+		details.shufflePaths = oram->getTotalReshuffleTime();
+		writeTimingMetric(details);
+
+		std::cout << "Count of tuples containing both filter_ids: " << count << std::endl;
 	}
+
 	TEST_F(ORAMTestSQL, SQLSUMORQuery) {
 		std::ifstream ifs("../SQL_Queries/SUM/ExtendedPrice.json");
 		json j;
 		ifs >> j;
 		std::vector<std::string> attributeIDs;
 		std::vector<size_t> attr_idx;
+		using namespace std::chrono;
+		timingDetails details = {};
+
+		details.testName = "SQLSUMORQuery";
+
+		auto shareStart = std::chrono::high_resolution_clock::now();
+		auto oram = loadORAMAndShares();
+		details.gettingShares = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now()	 - shareStart).count();
+
+		// Start tracking the time for query translation
+		auto start = std::chrono::high_resolution_clock::now();
+
 		std::string resultDir = "../Query_Result/SUMOR";
 		std::filesystem::create_directories(resultDir); // Ensure the folder exists
 		std::ofstream outFile(resultDir + "/server_1.txt");
@@ -507,6 +631,13 @@ namespace CloakQueryPathORAM
 			}
 		}	
 		outFile.close();
+
+		auto end = std::chrono::high_resolution_clock::now();
+		details.queryTranslation = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+		details.integrityCheck = oram->getTotalIntegrityCheckTime();
+		details.shufflePaths = oram->getTotalReshuffleTime();
+		writeTimingMetric(details);
+
 		std::cout << "Count of tuples containing either filter_id in SUM Query: " << count << std::endl;
 	}
 
@@ -516,6 +647,18 @@ namespace CloakQueryPathORAM
 		ifs >> j;
 		std::vector<std::string> attributeIDs;
 		std::vector<size_t> attr_idx;
+		using namespace std::chrono;
+		
+		timingDetails details = {};
+		details.testName = "SQLSUMANDQuery";
+
+		auto shareStart = std::chrono::high_resolution_clock::now();
+		auto oram = loadORAMAndShares();
+		details.gettingShares = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now()	 - shareStart).count();
+
+		// Start tracking the time for query translation
+		auto start = std::chrono::high_resolution_clock::now();
+
 		std::string resultDir = "../Query_Result/SUMAND";
 		std::filesystem::create_directories(resultDir); // Ensure the folder exists
 		std::ofstream outFile(resultDir + "/server_1.txt");
@@ -559,6 +702,13 @@ namespace CloakQueryPathORAM
 			}
 		}	
 		outFile.close();
+
+		auto end = std::chrono::high_resolution_clock::now();
+		details.queryTranslation = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+		details.integrityCheck = oram->getTotalIntegrityCheckTime();
+		details.shufflePaths = oram->getTotalReshuffleTime();
+		writeTimingMetric(details);
+
 		std::cout << "Count of tuples containing both filter_id in SUM Query: " << count << std::endl;
 	}
 
@@ -568,6 +718,18 @@ namespace CloakQueryPathORAM
 		ifs >> j;
 		std::vector<std::string> attributeIDs;
 		std::vector<size_t> attr_idx;
+
+		using namespace std::chrono;
+
+		timingDetails details = {};
+		details.testName = "SQLAVGORQuery";
+
+		auto shareStart = std::chrono::high_resolution_clock::now();
+		auto oram = loadORAMAndShares();
+		details.gettingShares = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now()	 - shareStart).count();
+
+		// Start tracking the time for query translation
+		auto start = std::chrono::high_resolution_clock::now();
 		std::string resultDir = "../Query_Result/AVGOR";
 		std::filesystem::create_directories(resultDir); // Ensure the folder exists
 		std::ofstream outFile(resultDir + "/server_1.txt");
@@ -612,6 +774,12 @@ namespace CloakQueryPathORAM
 		}	
 		outFile.close();
 		std::cout << "Count of tuples containing either filter_id in AVG Query: " << count << std::endl;
+
+		auto end = std::chrono::high_resolution_clock::now();
+		details.queryTranslation = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+		details.integrityCheck = oram->getTotalIntegrityCheckTime();
+		details.shufflePaths = oram->getTotalReshuffleTime();
+		writeTimingMetric(details);
 	}
 
 	TEST_F(ORAMTestSQL, SQLAVGANDQuery) {
@@ -620,6 +788,18 @@ namespace CloakQueryPathORAM
 		ifs >> j;
 		std::vector<std::string> attributeIDs;
 		std::vector<size_t> attr_idx;
+
+		using namespace std::chrono;
+		timingDetails details = {};
+		details.testName = "SQLAVGANDQuery";
+
+		auto shareStart = std::chrono::high_resolution_clock::now();
+		auto oram = loadORAMAndShares();
+		details.gettingShares = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now()	 - shareStart).count();
+
+		// Start tracking the time for query translation
+		auto start = std::chrono::high_resolution_clock::now();
+
 		std::string resultDir = "../Query_Result/AVGAND";
 		std::filesystem::create_directories(resultDir); // Ensure the folder exists
 		std::ofstream outFile(resultDir + "/server_1.txt");
@@ -662,8 +842,13 @@ namespace CloakQueryPathORAM
 			outFile << "\n";
 			}
 		}	
-		outFile.close();
+		outFile.close();		
 		std::cout << "Count of tuples containing both filter_id in AVG Query: " << count << std::endl;
+		auto end = std::chrono::high_resolution_clock::now();
+		details.queryTranslation = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+		details.integrityCheck = oram->getTotalIntegrityCheckTime();
+		details.shufflePaths = oram->getTotalReshuffleTime();
+		writeTimingMetric(details);
 	}
 	
 	TEST_F(ORAMTestSQL, SQLMINORQuery) {
@@ -672,6 +857,18 @@ namespace CloakQueryPathORAM
 		ifs >> j;
 		std::vector<std::string> attributeIDs;
 		std::vector<size_t> attr_idx;
+
+		using namespace std::chrono;
+		timingDetails details = {};
+		details.testName = "SQLMINORQuery";
+
+		auto shareStart = std::chrono::high_resolution_clock::now();
+		auto oram = loadORAMAndShares();
+		details.gettingShares = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now()	 - shareStart).count();
+
+		// Start tracking the time for query translation
+		auto start = std::chrono::high_resolution_clock::now();
+
 		std::string resultDir = "../Query_Result/MINOR";
 		std::filesystem::create_directories(resultDir); // Ensure the folder exists
 		std::ofstream outFile(resultDir + "/server_1.txt");
@@ -716,6 +913,12 @@ namespace CloakQueryPathORAM
 		}	
 		outFile.close();
 		std::cout << "Count of tuples containing either filter_id in MIN Query: " << count << std::endl;
+
+		auto end = std::chrono::high_resolution_clock::now();
+		details.queryTranslation = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+		details.integrityCheck = oram->getTotalIntegrityCheckTime();
+		details.shufflePaths = oram->getTotalReshuffleTime();
+		writeTimingMetric(details);
 	}
 
 	TEST_F(ORAMTestSQL, SQLMINANDQuery) {
@@ -724,6 +927,17 @@ namespace CloakQueryPathORAM
 		ifs >> j;
 		std::vector<std::string> attributeIDs;
 		std::vector<size_t> attr_idx;
+
+		using namespace std::chrono;
+		timingDetails details = {};
+		details.testName = "SQLMINANDQuery";
+
+		auto shareStart = std::chrono::high_resolution_clock::now();
+		auto oram = loadORAMAndShares();
+		details.gettingShares = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now()	 - shareStart).count();
+
+		// Start tracking the time for query translation
+		auto start = std::chrono::high_resolution_clock::now();
 		std::string resultDir = "../Query_Result/MINAND";
 		std::filesystem::create_directories(resultDir); // Ensure the folder exists
 		std::ofstream outFile(resultDir + "/server_1.txt");
@@ -768,6 +982,12 @@ namespace CloakQueryPathORAM
 		}	
 		outFile.close();
 		std::cout << "Count of tuples containing both filter_id in MIN Query: " << count << std::endl;
+
+		auto end = std::chrono::high_resolution_clock::now();
+		details.queryTranslation = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+		details.integrityCheck = oram->getTotalIntegrityCheckTime();
+		details.shufflePaths = oram->getTotalReshuffleTime();
+		writeTimingMetric(details);
 	}
 
 	TEST_F(ORAMTestSQL, SQLMAXORQuery) {
@@ -776,6 +996,18 @@ namespace CloakQueryPathORAM
 		ifs >> j;
 		std::vector<std::string> attributeIDs;
 		std::vector<size_t> attr_idx;
+
+		using namespace std::chrono;
+		timingDetails details = {};
+		details.testName = "SQLMAXORQuery";
+
+		auto shareStart = std::chrono::high_resolution_clock::now();
+		auto oram = loadORAMAndShares();
+		details.gettingShares = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now()	 - shareStart).count();
+
+		// Start tracking the time for query translation
+		auto start = std::chrono::high_resolution_clock::now();
+
 		std::string resultDir = "../Query_Result/MAXOR";
 		std::filesystem::create_directories(resultDir); // Ensure the folder exists
 		std::ofstream outFile(resultDir + "/server_1.txt");
@@ -820,6 +1052,12 @@ namespace CloakQueryPathORAM
 		}	
 		outFile.close();
 		std::cout << "Count of tuples containing either filter_id in MAX Query: " << count << std::endl;
+
+		auto end = std::chrono::high_resolution_clock::now();
+		details.queryTranslation = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+		details.integrityCheck = oram->getTotalIntegrityCheckTime();
+		details.shufflePaths = oram->getTotalReshuffleTime();
+		writeTimingMetric(details);
 	}
 
 	TEST_F(ORAMTestSQL, SQLMAXANDQuery) {
@@ -828,6 +1066,18 @@ namespace CloakQueryPathORAM
 		ifs >> j;
 		std::vector<std::string> attributeIDs;
 		std::vector<size_t> attr_idx;
+
+		using namespace std::chrono;
+		timingDetails details = {};
+		details.testName = "SQLMAXANDQuery";
+
+		auto shareStart = std::chrono::high_resolution_clock::now();
+		auto oram = loadORAMAndShares();
+		details.gettingShares = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now()	 - shareStart).count();
+		
+		// Start tracking the time for query translation
+		auto start = std::chrono::high_resolution_clock::now();
+
 		std::string resultDir = "../Query_Result/MAXAND";
 		std::filesystem::create_directories(resultDir); // Ensure the folder exists
 		std::ofstream outFile(resultDir + "/server_1.txt");
@@ -872,6 +1122,12 @@ namespace CloakQueryPathORAM
 		}	
 		outFile.close();
 		std::cout << "Count of tuples containing both filter_id in MAX Query: " << count << std::endl;
+
+		auto end = std::chrono::high_resolution_clock::now();
+		details.queryTranslation = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+		details.integrityCheck = oram->getTotalIntegrityCheckTime();
+		details.shufflePaths = oram->getTotalReshuffleTime();
+		writeTimingMetric(details);
 	}
 }
 
