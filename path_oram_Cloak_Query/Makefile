@@ -69,6 +69,8 @@ TESTAVG = $(BDIR)/test-avg
 TESTMAX = $(BDIR)/test-max
 TESTMIN = $(BDIR)/test-min
 
+TESTSSSQL = $(BDIR)/test-sss-sql
+
 ENTRYPOINTCC = $(CC) -o $@ $^ $(CPPFLAGS) $(INCLUDES) $(LDLIBS) $(LDTESTLIBS) $(LDFLAGS)
 
 # flags-setting commands
@@ -217,6 +219,18 @@ clean-test-min:
 
 debug-test-min: CPPFLAGS += -g -DTESTING	-fdebug-prefix-map=$(PWD)=.
 debug-test-min: $(TESTMIN)
+
+$(TESTSSSQL): $(OBJ) $(TDIR)/test-sss-sql.cpp
+	$(ENTRYPOINTCC)
+
+run-test-sss-sql: $(TESTSSSQL)
+	$(TESTSSSQL)
+
+clean-test-sss-sql:
+	$(RM) $(TESTSSSQL)
+
+debug-test-sss-sql: CPPFLAGS += -g -DTESTING	-fdebug-prefix-map=$(PWD)=.
+debug-test-sss-sql: $(TESTSSSQL)
 
 shared-debug: CPPFLAGS += -g -DDEBUG
 shared-debug: shared
