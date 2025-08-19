@@ -246,9 +246,22 @@ namespace CloakQueryPathORAM
 
 	vector<vector<int64_t>> ORAM::getContainer(const number block)
 	{
-		//std::cout << "Getting container for block: " << block << std::endl;
+		// Measure only the path retrieval time excluding integrity checks and reshuffles
+		const auto wallStart = std::chrono::high_resolution_clock::now();
+		const long long integrityStart = totalIntegrityCheckTime;
+		const long long reshuffleStart  = totalReshuffleTime;
+
 		bytes blockData;
 		get(block, blockData);
+
+		const auto wallEnd = std::chrono::high_resolution_clock::now();
+		const long long wallMs = std::chrono::duration_cast<std::chrono::milliseconds>(wallEnd - wallStart).count();
+		const long long integrityDelta = totalIntegrityCheckTime - integrityStart;
+		const long long reshuffleDelta  = totalReshuffleTime - reshuffleStart;
+		long long purePathMs = wallMs - integrityDelta - reshuffleDelta;
+		if (purePathMs < 0) purePathMs = 0; // safety against timing jitter/rounding
+		pathRetrievalTime += purePathMs;
+
 		//std::cout << "Getting container for block: " << block << ", Data size: " << blockData.size() << std::endl;
 		// Check if the block is empty
 		if (blockData.empty())
@@ -261,8 +274,7 @@ namespace CloakQueryPathORAM
 		memcpy(&dataSize, blockData.data(), sizeof(dataSize));
 
 		// Extract only the serialized data
-    	bytes serializedData(blockData.begin() + sizeof(dataSize), blockData.begin() + sizeof(dataSize) + dataSize);
-
+		bytes serializedData(blockData.begin() + sizeof(dataSize), blockData.begin() + sizeof(dataSize) + dataSize);
 		return deserialize(serializedData);
 	}
 

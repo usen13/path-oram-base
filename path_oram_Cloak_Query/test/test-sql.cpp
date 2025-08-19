@@ -319,12 +319,13 @@ namespace CloakQueryPathORAM
 		
 		std::unique_ptr<ORAM> loadORAMAndShares() {
 			std::vector<std::vector<int64_t>> retrievedShares;
-			auto [storage, map, stash, oram] = initializeFromBackup(commonSecretShareSize, 1);
-			std::string usedBlockIDsFile = "../backup_ser3/used_block_ids_server_2.bin";
+			auto [storage, map, stash, oram] = initializeFromBackup(commonSecretShareSize, 0);
+			std::string usedBlockIDsFile = "../backup_sql/used_block_ids_server_0.bin";
+			oram->resetTimingMetrics(); // Reset the timing metrics before starting the test
 			std::unordered_set<number> usedBlockIDs = loadUsedBlockIDs(usedBlockIDsFile);
 			std::vector<number> sortedUsedBlockIDs(usedBlockIDs.begin(), usedBlockIDs.end());
 			std::sort(sortedUsedBlockIDs.begin(), sortedUsedBlockIDs.end());
-			oram->loadMacMap("../backup_ser3/mac_map_server_2.bin");
+			oram->loadMacMap("../backup_sql/mac_map_server_0.bin");
 			for (number id : sortedUsedBlockIDs) {
 				std::vector<std::vector<int64_t>> blockShares;
 				blockShares = oram->getContainer(id);
@@ -420,10 +421,7 @@ namespace CloakQueryPathORAM
         //     std::cout << "Used block ID: " << id << std::endl;
         // }
         // Load mac map from file
-        oram->loadMacMap("../backup_sql/mac_map_server_0.bin");
-
-		// Measure the time taken to put shares
-		auto shareStart = std::chrono::high_resolution_clock::now();
+        oram->loadMacMap("../backup_sql/mac_map_server_0.bin");	
 
         for (number id : sortedUsedBlockIDs)
         {
@@ -433,7 +431,7 @@ namespace CloakQueryPathORAM
             retrievedShares_global.insert(retrievedShares_global.end(), blockShares.begin(), blockShares.end());
         }
 
-		details.gettingShares = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - shareStart).count();
+		details.gettingShares = oram->getPathRetrievalTime();
 		
 		std::cout << "Total number of blocks stored in the ORAM: while getting: " << usedBlockIDs.size() << std::endl;
         // Load the original secret shares for verification
@@ -462,9 +460,8 @@ namespace CloakQueryPathORAM
 		timingDetails details = {};
 		details.testName = "SQLCountORQuery";
 
-		auto shareStart = std::chrono::high_resolution_clock::now();
 		auto oram = loadORAMAndShares();
-		details.gettingShares = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - shareStart).count();
+		details.gettingShares = oram->getPathRetrievalTime();
 
 		// Start tracking the time for query translation
 		auto start = std::chrono::high_resolution_clock::now();
@@ -521,9 +518,9 @@ namespace CloakQueryPathORAM
 		timingDetails details = {};
 		details.testName = "SQLCountANDQuery";
 
-		auto shareStart = std::chrono::high_resolution_clock::now();
+		
 		auto oram = loadORAMAndShares();
-		details.gettingShares = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now()	 - shareStart).count();
+		details.gettingShares = oram->getPathRetrievalTime();
 
 		// Start tracking the time for query translation
 		auto start = std::chrono::high_resolution_clock::now();
@@ -581,9 +578,9 @@ namespace CloakQueryPathORAM
 
 		details.testName = "SQLSUMORQuery";
 
-		auto shareStart = std::chrono::high_resolution_clock::now();
+		
 		auto oram = loadORAMAndShares();
-		details.gettingShares = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now()	 - shareStart).count();
+		details.gettingShares = oram->getPathRetrievalTime();
 
 		// Start tracking the time for query translation
 		auto start = std::chrono::high_resolution_clock::now();
@@ -652,9 +649,9 @@ namespace CloakQueryPathORAM
 		timingDetails details = {};
 		details.testName = "SQLSUMANDQuery";
 
-		auto shareStart = std::chrono::high_resolution_clock::now();
+		
 		auto oram = loadORAMAndShares();
-		details.gettingShares = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now()	 - shareStart).count();
+		details.gettingShares = oram->getPathRetrievalTime();
 
 		// Start tracking the time for query translation
 		auto start = std::chrono::high_resolution_clock::now();
@@ -724,9 +721,9 @@ namespace CloakQueryPathORAM
 		timingDetails details = {};
 		details.testName = "SQLAVGORQuery";
 
-		auto shareStart = std::chrono::high_resolution_clock::now();
+		
 		auto oram = loadORAMAndShares();
-		details.gettingShares = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now()	 - shareStart).count();
+		details.gettingShares = oram->getPathRetrievalTime();
 
 		// Start tracking the time for query translation
 		auto start = std::chrono::high_resolution_clock::now();
@@ -793,9 +790,9 @@ namespace CloakQueryPathORAM
 		timingDetails details = {};
 		details.testName = "SQLAVGANDQuery";
 
-		auto shareStart = std::chrono::high_resolution_clock::now();
+		
 		auto oram = loadORAMAndShares();
-		details.gettingShares = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now()	 - shareStart).count();
+		details.gettingShares = oram->getPathRetrievalTime();
 
 		// Start tracking the time for query translation
 		auto start = std::chrono::high_resolution_clock::now();
@@ -862,9 +859,9 @@ namespace CloakQueryPathORAM
 		timingDetails details = {};
 		details.testName = "SQLMINORQuery";
 
-		auto shareStart = std::chrono::high_resolution_clock::now();
+		
 		auto oram = loadORAMAndShares();
-		details.gettingShares = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now()	 - shareStart).count();
+		details.gettingShares = oram->getPathRetrievalTime();
 
 		// Start tracking the time for query translation
 		auto start = std::chrono::high_resolution_clock::now();
@@ -932,9 +929,9 @@ namespace CloakQueryPathORAM
 		timingDetails details = {};
 		details.testName = "SQLMINANDQuery";
 
-		auto shareStart = std::chrono::high_resolution_clock::now();
+		
 		auto oram = loadORAMAndShares();
-		details.gettingShares = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now()	 - shareStart).count();
+		details.gettingShares = oram->getPathRetrievalTime();
 
 		// Start tracking the time for query translation
 		auto start = std::chrono::high_resolution_clock::now();
@@ -1001,9 +998,9 @@ namespace CloakQueryPathORAM
 		timingDetails details = {};
 		details.testName = "SQLMAXORQuery";
 
-		auto shareStart = std::chrono::high_resolution_clock::now();
+		
 		auto oram = loadORAMAndShares();
-		details.gettingShares = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now()	 - shareStart).count();
+		details.gettingShares = oram->getPathRetrievalTime();
 
 		// Start tracking the time for query translation
 		auto start = std::chrono::high_resolution_clock::now();
@@ -1071,10 +1068,10 @@ namespace CloakQueryPathORAM
 		timingDetails details = {};
 		details.testName = "SQLMAXANDQuery";
 
-		auto shareStart = std::chrono::high_resolution_clock::now();
-		auto oram = loadORAMAndShares();
-		details.gettingShares = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now()	 - shareStart).count();
 		
+		auto oram = loadORAMAndShares();
+		details.gettingShares = oram->getPathRetrievalTime();
+
 		// Start tracking the time for query translation
 		auto start = std::chrono::high_resolution_clock::now();
 

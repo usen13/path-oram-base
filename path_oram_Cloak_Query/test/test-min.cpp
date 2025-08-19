@@ -238,10 +238,10 @@ INSTANTIATE_TEST_SUITE_P(
     AvgDirs,
     MinAggregationTest,
     ::testing::Values(
-        //std::make_tuple("../SQL_Queries/MIN/ExtendedPrice_Min.json", "../Query_Result/MINOR"),
-        //std::make_tuple("../SQL_Queries/MIN/Tax_Min.json", "../Query_Result/MINAND")
-        std::make_tuple("../SQL_Queries/MIN/ExtendedPrice_Min.json", "../Query_Result_SSS/MINOR"),
-        std::make_tuple("../SQL_Queries/MIN/Tax_Min.json", "../Query_Result_SSS/MINAND")
+        std::make_tuple("../SQL_Queries/MIN/ExtendedPrice_Min.json", "../Query_Result/MINOR"),
+        std::make_tuple("../SQL_Queries/MIN/Tax_Min.json", "../Query_Result/MINAND")
+        //std::make_tuple("../SQL_Queries/MIN/ExtendedPrice_Min.json", "../Query_Result_SSS/MINOR"),
+        //std::make_tuple("../SQL_Queries/MIN/Tax_Min.json", "../Query_Result_SSS/MINAND")
     )
 );
 

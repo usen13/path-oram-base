@@ -138,12 +138,11 @@ TEST(SQLHandlerIntegrationTest, PythonParserRuns) {
     ASSERT_EQ(ret, 0); // Check that the script ran successfully
 
 }
-// Now add a test that calls this function
+
 TEST(SQLHandlerIntegrationTest, MainLogicRunsWithoutError) {
     ASSERT_EQ(run_sql_handler_main_logic(), 0);
 }
 
-// Now add a test that calls this function
 TEST(SQLHandlerIntegrationTest, ShareAppender) {
     ASSERT_EQ(run_sql_appender_logic(), 0);
 }

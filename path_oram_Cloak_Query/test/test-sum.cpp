@@ -106,10 +106,10 @@ INSTANTIATE_TEST_SUITE_P(
     AvgDirs,
     SumAggregationTest,
     ::testing::Values(
-        //std::make_tuple("../SQL_Queries/SUM/ExtendedPrice.json", "../Query_Result/SUMOR"),
-        //std::make_tuple("../SQL_Queries/SUM/Quantity.json", "../Query_Result/SUMAND")
-        std::make_tuple("../SQL_Queries/SUM/ExtendedPrice.json", "../Query_Result_SSS/SUMOR"),
-        std::make_tuple("../SQL_Queries/SUM/Quantity.json", "../Query_Result_SSS/SUMAND")
+        std::make_tuple("../SQL_Queries/SUM/ExtendedPrice.json", "../Query_Result/SUMOR"),
+        std::make_tuple("../SQL_Queries/SUM/Quantity.json", "../Query_Result/SUMAND")
+        //std::make_tuple("../SQL_Queries/SUM/ExtendedPrice.json", "../Query_Result_SSS/SUMOR"),
+        //std::make_tuple("../SQL_Queries/SUM/Quantity.json", "../Query_Result_SSS/SUMAND")
     )
 );
 

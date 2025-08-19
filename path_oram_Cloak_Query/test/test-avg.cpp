@@ -110,10 +110,10 @@ INSTANTIATE_TEST_SUITE_P(
     AvgDirs,
     AvgAggregationTest,
     ::testing::Values(
-        //std::make_tuple("../SQL_Queries/AVG/Quantity.json", "../Query_Result/AVGOR"),
-        //std::make_tuple("../SQL_Queries/AVG/Discount.json", "../Query_Result/AVGAND")
-        std::make_tuple("../SQL_Queries/AVG/Quantity.json", "../Query_Result_SSS/AVGOR"),
-        std::make_tuple("../SQL_Queries/AVG/Discount.json", "../Query_Result_SSS/AVGAND")
+        std::make_tuple("../SQL_Queries/AVG/Quantity.json", "../Query_Result/AVGOR"),
+        std::make_tuple("../SQL_Queries/AVG/Discount.json", "../Query_Result/AVGAND")
+        //std::make_tuple("../SQL_Queries/AVG/Quantity.json", "../Query_Result_SSS/AVGOR"),
+        //std::make_tuple("../SQL_Queries/AVG/Discount.json", "../Query_Result_SSS/AVGAND")
     )
 );
 

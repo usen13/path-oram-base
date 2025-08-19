@@ -239,10 +239,10 @@ INSTANTIATE_TEST_SUITE_P(
     AvgDirs,
     MaxAggregationTest,
     ::testing::Values(
-        //std::make_tuple("../SQL_Queries/MAX/ExtendedPrice_Max.json", "../Query_Result/MAXOR"),
-        //std::make_tuple("../SQL_Queries/MAX/Tax_Max.json", "../Query_Result/MAXAND")
-        std::make_tuple("../SQL_Queries/MAX/ExtendedPrice_Max.json", "../Query_Result_SSS/MAXOR"),
-        std::make_tuple("../SQL_Queries/MAX/Tax_Max.json", "../Query_Result_SSS/MAXAND")
+        std::make_tuple("../SQL_Queries/MAX/ExtendedPrice_Max.json", "../Query_Result/MAXOR"),
+        std::make_tuple("../SQL_Queries/MAX/Tax_Max.json", "../Query_Result/MAXAND")
+        //std::make_tuple("../SQL_Queries/MAX/ExtendedPrice_Max.json", "../Query_Result_SSS/MAXOR"),
+        //std::make_tuple("../SQL_Queries/MAX/Tax_Max.json", "../Query_Result_SSS/MAXAND")
     )
 );
 

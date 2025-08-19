@@ -46,6 +46,7 @@ namespace CloakQueryPathORAM
 		// Timing variables
 		mutable long long totalIntegrityCheckTime = 0;
 		mutable long long totalReshuffleTime = 0;
+		mutable long long pathRetrievalTime = 0;
 
 		// a layer between (expensive) storage and the protocol;
 		// holds items (buckets of blocks) in memory and unencrypted;
@@ -339,11 +340,17 @@ namespace CloakQueryPathORAM
 		 */
 		long long getTotalReshuffleTime() const { return totalReshuffleTime; }
 
+		/**
+		 * @brief Path retrieval time
+		 */
+		long long getPathRetrievalTime() const { return pathRetrievalTime; }
+
 		/** @brief Reset the timing counters for integrity checks and reshuffles
 		 */
 		void resetTimingMetrics() {
 			totalIntegrityCheckTime = 0;
 			totalReshuffleTime = 0;
+			pathRetrievalTime = 0;
 		}
 	};
 }
